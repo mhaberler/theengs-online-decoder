@@ -1,0 +1,2 @@
+version,device name,recording epoch time,recording time,recording timezone,platform,appVersion,device id,sensors,sampleRateMs,standardisation,platform version
+3,iPhone 16 Pro Max,1780766604033,2026-06-06_17-23-24,Europe/Vienna,ios,1.60,47934500-52d7-43f4-a499-86cee7c1222d,Bluetooth|Annotation|BluetoothMetadata,1000||0,false,26.5
