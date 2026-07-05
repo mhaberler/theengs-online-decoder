@@ -17,12 +17,16 @@ const WASM = resolve(
   'theengs_decoder_wasm.mjs',
 );
 
+// Same pattern for the jsonata UMD build (imported via web/jsonata-shim.js).
+const JSONATA = resolve(__dirname, '..', 'node_modules', 'jsonata', 'jsonata.min.js');
+
 export default defineConfig({
   root: __dirname,
   base: './',
   resolve: {
     alias: {
       './theengs_decoder_wasm.mjs': WASM,
+      './jsonata.min.js': JSONATA,
     },
   },
   build: {

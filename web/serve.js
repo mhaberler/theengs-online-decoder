@@ -42,6 +42,10 @@ function resolveFile(urlPath) {
         'theengs_decoder_wasm.mjs',
       );
     }
+    // Same pattern for the jsonata UMD build (imported via web/jsonata-shim.js).
+    if (tail === 'jsonata.min.js') {
+      return path.join(pkgDir, 'node_modules', 'jsonata', 'jsonata.min.js');
+    }
   }
   return abs;
 }

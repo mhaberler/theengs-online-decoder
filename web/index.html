@@ -8,7 +8,7 @@
   h1 { font-size: 1.4rem; margin: 0 0 1rem; }
   fieldset { border: 1px solid #ccc; border-radius: 6px; margin: 1rem 0; padding: 1rem; }
   legend { padding: 0 .5rem; color: #555; }
-  #status, #ser-status { margin-top: .5rem; color: #444; min-height: 1.2em; }
+  #status, #ser-status, #jso-status { margin-top: .5rem; color: #444; min-height: 1.2em; }
   #download { display: none; margin-top: 1rem; }
   #download a { display: inline-block; padding: .5rem 1rem; background: #2e7d32; color: #fff; border-radius: 4px; text-decoration: none; }
   #summary { font-family: ui-monospace, monospace; white-space: pre-wrap; background: #f6f6f6; padding: .75rem; border-radius: 4px; }
@@ -30,10 +30,10 @@
   .scan-indicator[data-state="scanning"]  { background: #2e7d32; box-shadow: 0 0 6px #2e7d32; animation: pulse 1.2s ease-in-out infinite; }
   @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
 
-  #ser-portinfo { font-family: ui-monospace, monospace; font-size: 12px; color: #555; }
-  #ser-kind { font-size: 12px; color: #1565c0; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #e3f2fd; }
-  #ser-kind:empty { display: none; }
-  #ser-counters, #rad-counters { font-family: ui-monospace, monospace; font-size: 12px; color: #333; margin-left: auto; }
+  #ser-portinfo, #jso-portinfo { font-family: ui-monospace, monospace; font-size: 12px; color: #555; }
+  #ser-kind, #jso-kind { font-size: 12px; color: #1565c0; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #e3f2fd; }
+  #ser-kind:empty, #jso-kind:empty { display: none; }
+  #ser-counters, #jso-counters, #rad-counters { font-family: ui-monospace, monospace; font-size: 12px; color: #333; margin-left: auto; }
   #rad-status { margin-top: .5rem; color: #444; min-height: 1.2em; }
 
   /* Log (shared) */
@@ -43,6 +43,13 @@
   .log-row.log-undecoded { border-left-color: #999; }
   .log-row.log-omg       { border-left-color: #1976d2; color: #1565c0; }
   .log-row.log-misc      { border-left-color: #ccc; color: #666; }
+  .log-row.log-error     { border-left-color: #c62828; }
+  .live-log.only-decoded .log-undecoded { display: none; }
+
+  /* JSONata expression panes */
+  .expr-pane textarea { width: 100%; min-height: 8em; font-family: ui-monospace, monospace; font-size: 12px; box-sizing: border-box; }
+  .expr-pane label { display: block; font-weight: 600; margin-bottom: .25rem; }
+  .expr-error { color: #c62828; font-family: ui-monospace, monospace; font-size: 12px; min-height: 1.2em; white-space: pre-wrap; }
   .log-head { font-weight: 600; }
   .log-decoded-json, .log-raw-json { margin: .25rem 0 0; padding: .25rem .5rem; background: #f4f4f4; border-radius: 2px; white-space: pre-wrap; }
   details > summary { cursor: pointer; color: #555; font-size: 11px; }
@@ -53,7 +60,8 @@
 
 <div class="tabs" role="tablist">
   <button class="tab-btn active" data-tab="file" role="tab">File</button>
-  <button class="tab-btn" data-tab="serial" role="tab">Serial</button>
+  <button class="tab-btn" data-tab="serial" role="tab">Serial/theengs</button>
+  <button class="tab-btn" data-tab="serial-jsonata" role="tab">Serial/JSONata</button>
   <button class="tab-btn" data-tab="radio" role="tab">BLE radio</button>
 </div>
 
@@ -65,9 +73,30 @@
     <legend>Input</legend>
     <div class="row">
       <input type="file" id="file" accept=".json,application/json">
+      <label>Decoder
+        <select id="file-mode">
+          <option value="theengs" selected>theengs</option>
+          <option value="jsonata">JSONata</option>
+        </select>
+      </label>
       <button id="run" disabled>Decode</button>
     </div>
     <div id="status">Loading decoder&hellip;</div>
+  </fieldset>
+
+  <fieldset id="file-exprs" style="display:none">
+    <legend>JSONata expressions (shared with Serial/JSONata tab)</legend>
+    <div class="expr-pane">
+      <label for="file-trigger">Trigger expression</label>
+      <textarea id="file-trigger" spellcheck="false"></textarea>
+      <div id="file-trigger-error" class="expr-error"></div>
+    </div>
+    <div class="expr-pane">
+      <label for="file-decoder">Decoder expression</label>
+      <textarea id="file-decoder" spellcheck="false"></textarea>
+      <div id="file-decoder-error" class="expr-error"></div>
+    </div>
+    <button id="file-save">Save expressions</button>
   </fieldset>
 
   <fieldset>
@@ -107,6 +136,55 @@
       <span id="ser-counters">decoded: 0 / seen: 0</span>
     </div>
     <div id="ser-log" class="live-log" aria-live="polite"></div>
+  </fieldset>
+</section>
+
+<!-- Serial/JSONata tab -->
+<section class="tab-panel" data-panel="serial-jsonata">
+  <p>Connect a USB-serial BLE scanner dongle (same dongles as Serial/theengs) and decode
+    advertisements with your own <a href="https://jsonata.org/" target="_blank" rel="noopener">JSONata</a>
+    expressions: adverts matching the <em>trigger</em> expression are run through the
+    <em>decoder</em> expression; TheengsDecoder is not used.</p>
+
+  <fieldset>
+    <legend>Port</legend>
+    <div class="row">
+      <button id="jso-connect">Connect&hellip;</button>
+      <button id="jso-disconnect">Disconnect</button>
+      <label>Profile
+        <select id="jso-profile"></select>
+      </label>
+      <span id="jso-kind"></span>
+      <span id="jso-portinfo"></span>
+    </div>
+    <div id="jso-driver-controls"></div>
+    <div id="jso-status">Initializing&hellip;</div>
+  </fieldset>
+
+  <fieldset>
+    <legend>JSONata expressions (shared with File tab)</legend>
+    <div class="expr-pane">
+      <label for="jso-trigger">Trigger expression</label>
+      <textarea id="jso-trigger" spellcheck="false"></textarea>
+      <div id="jso-trigger-error" class="expr-error"></div>
+    </div>
+    <div class="expr-pane">
+      <label for="jso-decoder">Decoder expression</label>
+      <textarea id="jso-decoder" spellcheck="false"></textarea>
+      <div id="jso-decoder-error" class="expr-error"></div>
+    </div>
+    <button id="jso-save">Save expressions</button>
+  </fieldset>
+
+  <fieldset>
+    <legend>Scan</legend>
+    <div class="row">
+      <button id="jso-scan"><span id="jso-indicator" class="scan-indicator" data-state="idle"></span><span>Start scan</span></button>
+      <button id="jso-clear">Clear log</button>
+      <label><input type="checkbox" id="jso-onlydecoded"> Only decoded</label>
+      <span id="jso-counters">decoded: 0 / seen: 0</span>
+    </div>
+    <div id="jso-log" class="live-log" aria-live="polite"></div>
   </fieldset>
 </section>
 

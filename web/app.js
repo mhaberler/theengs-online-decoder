@@ -2,7 +2,9 @@
 
 import { loadDecoder, decodeEntry } from './decoder.js';
 import { initSerial } from './serial.js';
+import { initSerialJsonata } from './serial-jsonata.js';
 import { initRadio } from './radio.js';
+import { bindExprPanes, evaluateAdv } from './jsonata-exprs.js';
 
 // --- Tabs ---
 const tabBtns = document.querySelectorAll('.tab-btn');
@@ -22,14 +24,33 @@ const statusEl = document.getElementById('status');
 const summaryEl = document.getElementById('summary');
 const downloadEl = document.getElementById('download');
 const dlEl = document.getElementById('dl');
+const modeEl = document.getElementById('file-mode');
+const exprsEl = document.getElementById('file-exprs');
 
 let decoder = null;
 let lastBlobUrl = null;
 
+bindExprPanes({
+  trigger:      document.getElementById('file-trigger'),
+  decoder:      document.getElementById('file-decoder'),
+  save:         document.getElementById('file-save'),
+  triggerError: document.getElementById('file-trigger-error'),
+  decoderError: document.getElementById('file-decoder-error'),
+});
+
+function updateRunEnabled() {
+  runEl.disabled = modeEl.value === 'theengs' && !decoder;
+}
+
+modeEl.addEventListener('change', () => {
+  exprsEl.style.display = modeEl.value === 'jsonata' ? '' : 'none';
+  updateRunEnabled();
+});
+
 loadDecoder().then((d) => {
   decoder = d;
   statusEl.textContent = 'Decoder ready. Select a file.';
-  runEl.disabled = false;
+  updateRunEnabled();
 }).catch((err) => {
   statusEl.textContent = 'Failed to load decoder: ' + err.message;
 });
@@ -38,14 +59,20 @@ function nextTick() {
   return new Promise((r) => setTimeout(r, 0));
 }
 
-async function processEntries(entries) {
+async function processEntries(entries, decodeFn) {
   const out = new Array(entries.length);
   const byModel = {};
   let decoded = 0;
+  let errors = 0;
   const CHUNK = 500;
   for (let i = 0; i < entries.length; i++) {
     const e = entries[i];
-    const d = decodeEntry(decoder, e);
+    let d = null;
+    try {
+      d = await decodeFn(e);
+    } catch {
+      errors++;
+    }
     out[i] = { ...e, decoded: d };
     if (d) {
       decoded++;
@@ -57,7 +84,7 @@ async function processEntries(entries) {
       await nextTick();
     }
   }
-  return { out, total: entries.length, decoded, byModel };
+  return { out, total: entries.length, decoded, byModel, errors };
 }
 
 function readFile(file) {
@@ -75,10 +102,12 @@ runEl.addEventListener('click', async () => {
     statusEl.textContent = 'Pick a file first.';
     return;
   }
-  if (!decoder) {
+  const jsonataMode = modeEl.value === 'jsonata';
+  if (!jsonataMode && !decoder) {
     statusEl.textContent = 'Decoder not ready yet.';
     return;
   }
+  const decodeFn = jsonataMode ? evaluateAdv : (e) => decodeEntry(decoder, e);
   runEl.disabled = true;
   downloadEl.style.display = 'none';
   summaryEl.textContent = '(processing…)';
@@ -89,12 +118,14 @@ runEl.addEventListener('click', async () => {
     const entries = JSON.parse(text);
     if (!Array.isArray(entries)) throw new Error('Expected a JSON array at the top level.');
 
-    const { out, total, decoded, byModel } = await processEntries(entries);
+    const { out, total, decoded, byModel, errors } = await processEntries(entries, decodeFn);
 
     summaryEl.textContent =
       `file:       ${file.name}\n` +
+      `decoder:    ${jsonataMode ? 'JSONata' : 'theengs'}\n` +
       `total:      ${total}\n` +
       `decoded:    ${decoded}\n` +
+      (errors ? `errors:     ${errors}\n` : '') +
       `by_model:   ${JSON.stringify(byModel, null, 2)}`;
 
     const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
@@ -109,12 +140,13 @@ runEl.addEventListener('click', async () => {
     statusEl.textContent = 'Error: ' + err.message;
     summaryEl.textContent = '(no file processed yet)';
   } finally {
-    runEl.disabled = false;
+    updateRunEnabled();
   }
 });
 
-// --- Serial tab ---
+// --- Serial tabs ---
 initSerial(document.querySelector('[data-panel="serial"]'));
+initSerialJsonata(document.querySelector('[data-panel="serial-jsonata"]'));
 
 // --- BLE radio tab (opt-in via ?webble=true) ---
 const webbleEnabled = new URLSearchParams(location.search).get('webble') === 'true';

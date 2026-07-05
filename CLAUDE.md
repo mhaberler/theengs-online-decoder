@@ -44,10 +44,16 @@ three string-in/string-out methods — `decodeBLE`, `getProperties`,
 `main`; [index.d.ts](index.d.ts) is the type surface.
 
 **Web app** ([web/](web/)). Static, build-stepless-capable, runs the same wasm
-in-page. Three tabs in [web/app.js](web/app.js): **File** (decode a sensorlogs
-JSON array, annotate each entry with a `decoded` field, offer download), **Serial**
-([web/serial.js](web/serial.js), Web Serial API), **Radio**
+in-page. Tabs in [web/app.js](web/app.js): **File** (decode a sensorlogs
+JSON array — theengs or JSONata mode — annotate each entry with a `decoded` field,
+offer download), **Serial/theengs** ([web/serial.js](web/serial.js), Web Serial API),
+**Serial/JSONata** ([web/serial-jsonata.js](web/serial-jsonata.js), same dongle
+stack but decodes via user-pasted JSONata trigger/decoder expressions), **Radio**
 ([web/radio.js](web/radio.js), `navigator.bluetooth.requestLEScan`).
+Both serial tabs share [web/serial-core.js](web/serial-core.js) (port dialog,
+autodetect, read loop, log rendering) and differ only in the `decode` callback;
+the JSONata expression pair lives in [web/jsonata-exprs.js](web/jsonata-exprs.js)
+(one localStorage-backed pair shared by the File and Serial/JSONata tabs).
 [web/decoder.js](web/decoder.js) is the browser-side wasm wrapper (parallels
 index.js).
 
@@ -65,7 +71,10 @@ is the single source of truth — never copied or committed. Browser code import
 the relative URL `./theengs_decoder_wasm.mjs` ([web/decoder.js](web/decoder.js));
 each server maps that URL to the node_modules artifact: vite via `resolve.alias`
 ([web/vite.config.mjs](web/vite.config.mjs)), `serve.js` via a route in
-`resolveFile`. Node imports the bare specifier directly.
+`resolveFile`. Node imports the bare specifier directly. The jsonata UMD build
+(`node_modules/jsonata/jsonata.min.js`) is served the same way — browser code
+imports `./jsonata.min.js` through [web/jsonata-shim.js](web/jsonata-shim.js),
+which re-exports `window.jsonata`.
 
 ## Conventions
 
