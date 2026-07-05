@@ -59,12 +59,20 @@ let sources = {
   decoder: localStorage.getItem(KEY_DECODER) ?? DEFAULT_DECODER,
 };
 
-let compiled = { trigger: null, decoder: null };
-try {
-  compiled = { trigger: jsonata(sources.trigger), decoder: jsonata(sources.decoder) };
-} catch {
-  // Corrupt saved expression — panes will show the error on bind/save.
+function compileOne(src) {
+  try {
+    return { expr: jsonata(src), error: null };
+  } catch (e) {
+    const pos = e.position !== undefined ? ` (position ${e.position})` : '';
+    return { expr: null, error: e.message + pos };
+  }
 }
+
+// Compile whatever was stored; a corrupt saved expression surfaces its error
+// in every bound pane so the failure is visible without pressing Save.
+const initial = { trigger: compileOne(sources.trigger), decoder: compileOne(sources.decoder) };
+let compiled = { trigger: initial.trigger.expr, decoder: initial.decoder.expr };
+let lastErrors = { trigger: initial.trigger.error, decoder: initial.decoder.error };
 
 const panes = new Set();
 
@@ -76,16 +84,7 @@ function showErrors(p, errs) {
 function refreshPane(p) {
   p.trigger.value = sources.trigger;
   p.decoder.value = sources.decoder;
-  showErrors(p, {});
-}
-
-function compileOne(src) {
-  try {
-    return { expr: jsonata(src), error: null };
-  } catch (e) {
-    const pos = e.position !== undefined ? ` (position ${e.position})` : '';
-    return { expr: null, error: e.message + pos };
-  }
+  showErrors(p, lastErrors);
 }
 
 // els: { trigger, decoder, save, triggerError, decoderError }
@@ -99,6 +98,7 @@ export function bindExprPanes(els) {
     if (trig.error || dec.error) return;
     sources = { trigger: els.trigger.value, decoder: els.decoder.value };
     compiled = { trigger: trig.expr, decoder: dec.expr };
+    lastErrors = { trigger: null, decoder: null };
     localStorage.setItem(KEY_TRIGGER, sources.trigger);
     localStorage.setItem(KEY_DECODER, sources.decoder);
     for (const p of panes) if (p !== els) refreshPane(p);
