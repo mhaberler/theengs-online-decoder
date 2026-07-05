@@ -46,7 +46,9 @@ bun run test
 ```
 
 See [web/README.md](web/README.md) for the browser app (file decode, Web Serial,
-Web Bluetooth dongle drivers).
+Web Bluetooth dongle drivers, and decoding with user-supplied
+[JSONata](https://jsonata.org/) expressions as an alternative to the built-in
+theengs decoders).
 
 ## License
 

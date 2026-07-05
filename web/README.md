@@ -1,9 +1,61 @@
 # Theengs sensorlog decoder — web app
 
-Static browser app that reads a sensorlogs-style JSON array, decodes each entry
-via TheengsDecoder (WebAssembly, in-page), and offers the decorated result as a
-download. Each entry gets a nested `decoded` field (`null` on no match); the
-original schema is preserved.
+Static browser app for decoding BLE advertisements, either from a sensorlogs
+JSON file or live from a USB-serial scanner dongle. Four tabs:
+
+- **File** — reads a sensorlogs-style JSON array, decodes each entry, and
+  offers the decorated result as a download. Each entry gets a nested
+  `decoded` field (`null` on no match); the original schema is preserved.
+  A selector picks the decoder: **theengs** (TheengsDecoder WebAssembly,
+  in-page) or **JSONata** (see below).
+- **Serial/theengs** — connects a BLE scanner dongle via Web Serial
+  (nRF Sniffer, adv2uart, OpenMQTTGateway serial; auto-detected) and decodes
+  live advertisements with TheengsDecoder.
+- **Serial/JSONata** — same dongle stack, but decodes with user-supplied
+  JSONata expressions instead of TheengsDecoder.
+- **BLE radio** — scans with the host's own radio via Web Bluetooth
+  (opt-in with `?webble=true`).
+
+## JSONata decoding
+
+Decode devices TheengsDecoder doesn't know without touching C++: paste a pair
+of [JSONata](https://jsonata.org/) expressions and press *Save expressions*.
+
+- **Trigger expression** — a predicate evaluated against every advertisement
+  object (fields like `id`, `mac`, `rssi`, `channel`, `advType`,
+  `manufacturerdata`, `servicedata`, `name`). Truthy result → the entry is
+  decoded; falsy (`false`, `null`, `undefined`, `0`, `""`) → undecoded.
+- **Decoder expression** — evaluated against the same object when the trigger
+  matched; its result is displayed (Serial/JSONata tab) or stored as the
+  entry's `decoded` field (File tab).
+
+Expressions are easiest to develop in the [JSONata sandbox](https://try.jsonata.org/) —
+here is the full RuuviTag RAWv2 decoder with a sample advertisement:
+<https://try.jsonata.org/uh4vIKxBh>.
+
+Example — RuuviTag RAWv2 (this pair is prefilled on first visit):
+
+```jsonata
+$substring(manufacturerdata, 0, 4) = "9904"
+```
+
+```jsonata
+(
+  $payload := $substring(manufacturerdata, 4, 48);
+  $temp_raw := $number("0x" & $substring($payload, 2, 4));
+  {
+    "model_id": "RuuviTag_RAWv2",
+    "tempc": (($temp_raw > 32767) ? $temp_raw - 65536 : $temp_raw) * 0.005
+  }
+)
+```
+
+The pair is saved in `localStorage` and shared between the File and
+Serial/JSONata tabs. Syntax errors are shown inline on save (invalid
+expressions are not saved); runtime evaluation errors show as error rows and
+scanning continues. The *Only decoded* checkbox hides non-matching
+advertisements. The jsonata library is served from `node_modules` just like
+the wasm — no copy in the repo.
 
 ## Run locally — no build step
 
