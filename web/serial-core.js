@@ -1,6 +1,6 @@
 'use strict';
 
-import { driverFactories, detectDongle } from './drivers/index.js';
+import * as conn from './serial-conn.js';
 
 const MAX_ROWS = 2000;
 
@@ -10,18 +10,11 @@ const ADV_ABBR = {
 };
 const LAST_SEEN_TTL_MS = 60_000;
 
-const PROFILES = [
-  { id: 'auto', label: 'Auto-detect', baud: null, flow: null },
-  { id: 'nrf', label: 'nRF Sniffer (1 Mbaud)', baud: 1000000, flow: 'hardware', driverName: 'nRF Sniffer' },
-  { id: 'adv2uart', label: 'adv2uart (ESP32-C3)', baud: 115200, flow: 'none', driverName: 'adv2uart' },
-  { id: 'omg-115k', label: 'OMG @ 115200', baud: 115200, flow: 'none', driverName: 'OMG' },
-  { id: 'omg-921k', label: 'OMG @ 921600', baud: 921600, flow: 'none', driverName: 'OMG' },
-  { id: 'omg-9600', label: 'OMG @ 9600',   baud: 9600,   flow: 'none', driverName: 'OMG' },
-];
-
-// Shared serial-tab machinery: port dialog, driver autodetect, read loop, log
-// rendering. Each tab supplies `decode(advJson)` — sync or async, returning a
-// decoded object or null; a throw renders an error row and scanning continues.
+// Per-tab serial view over the shared connection (serial-conn.js): renders the
+// advert stream into this tab's log with the tab's `decode(advJson)` strategy
+// (sync or async, returning a decoded object or null; a throw renders an error
+// row and scanning continues). Connection and scan state are shared — buttons
+// in any tab drive the same dongle, and all tabs mirror its state.
 export function initSerialCore(root, { prefix, decode }) {
   const q = (id) => root.querySelector(`#${prefix}-${id}`);
   const els = {
@@ -41,23 +34,15 @@ export function initSerialCore(root, { prefix, decode }) {
     counters:   q('counters'),
   };
 
-  let port = null;
-  let reader = null;
-  let readLoop = null;
-  let writer = null;
-  let writerLock = Promise.resolve();
-  let driver = null;
-  let pingTimer = null;
-  let closing = false;
-  let scanning = false;
   let seen = 0;
   let decoded = 0;
   let autoScroll = true;
+  let controlsRendered = false;
   let decodeChain = Promise.resolve();
   const lastSeen = new Map();
 
   if (els.profile && !els.profile.dataset.populated) {
-    for (const p of PROFILES) {
+    for (const p of conn.PROFILES) {
       const opt = document.createElement('option');
       opt.value = p.id;
       opt.textContent = p.label;
@@ -74,19 +59,14 @@ export function initSerialCore(root, { prefix, decode }) {
     return { setStatus, available: false };
   }
 
-  setIndicator('idle');
-  els.disconnect.disabled = true;
-  els.scan.disabled = true;
-  if (els.kind) els.kind.textContent = '';
-
   els.log.addEventListener('scroll', () => {
     const nearBottom = els.log.scrollHeight - els.log.scrollTop - els.log.clientHeight < 40;
     autoScroll = nearBottom;
   });
 
-  els.connect.addEventListener('click', onConnect);
-  els.disconnect.addEventListener('click', onDisconnect);
-  els.scan.addEventListener('click', onToggleScan);
+  els.connect.addEventListener('click', () => conn.connect(els.profile?.value ?? 'auto'));
+  els.disconnect.addEventListener('click', () => conn.disconnect());
+  els.scan.addEventListener('click', () => conn.toggleScan());
   els.clear.addEventListener('click', () => {
     els.log.replaceChildren();
     seen = 0; decoded = 0; lastSeen.clear(); updateCounters();
@@ -95,165 +75,31 @@ export function initSerialCore(root, { prefix, decode }) {
     els.log.classList.toggle('only-decoded', els.onlyDecoded.checked);
   });
 
-  async function safeWrite(bytes) {
-    if (!writer) return;
-    writerLock = writerLock.then(() => writer.write(bytes)).catch(() => {});
-    return writerLock;
-  }
-
-  async function openPort(p, baudRate, flowControl) {
-    const opts = { baudRate };
-    if (flowControl) opts.flowControl = flowControl;
-    await p.open(opts);
-    // Note: do NOT toggle DTR/RTS — ESP32-based dongles (OMG) reset on those edges.
-  }
-
-  async function onConnect() {
-    try {
-      port = await navigator.serial.requestPort();
-      const profileId = els.profile?.value ?? 'auto';
-      const profile = PROFILES.find((p) => p.id === profileId) ?? PROFILES[0];
-
-      const attempts = profile.id === 'auto'
-        ? [
-            { baud: 115200,  flow: 'none',     forceDriverName: null, timeoutMs: 1500 },
-            { baud: 1000000, flow: 'hardware', forceDriverName: null, timeoutMs: 800 },
-          ]
-        : [{ baud: profile.baud, flow: profile.flow, forceDriverName: profile.driverName, timeoutMs: 1500 }];
-
-      let chosen = null;
-      let pendingBuffered = [];
-      for (const a of attempts) {
-        try {
-          await openPort(port, a.baud, a.flow);
-        } catch (e) {
-          setStatus(`Open ${a.baud}/${a.flow} failed: ${e.message}`);
-          continue;
-        }
-
-        if (a.forceDriverName) {
-          const factory = driverFactories.find((f) => f().name === a.forceDriverName);
-          chosen = { driver: factory ? factory() : null, baud: a.baud, flow: a.flow, buffered: [] };
-          if (chosen.driver) {
-            writer = port.writable.getWriter();
-            reader = port.readable.getReader();
-            break;
-          }
-        } else {
-          writer = port.writable.getWriter();
-          reader = port.readable.getReader();
-          setStatus(`Probing dongle at ${a.baud}…`);
-          const det = await detectDongle({ reader, write: safeWrite, timeoutMs: a.timeoutMs ?? 700 });
-          if (det.driver) {
-            chosen = { driver: det.driver, baud: a.baud, flow: a.flow, buffered: det.buffered };
-            break;
-          }
-          // No match — tear down and try next baud
-          try { await reader.cancel(); } catch {}
-          try { reader.releaseLock(); } catch {}
-          reader = null;
-          try { writer.releaseLock(); } catch {}
-          writer = null;
-          writerLock = Promise.resolve();
-          try { await port.close(); } catch (e) { setStatus('close failed: ' + e.message); }
-          await new Promise((r) => setTimeout(r, 200));
-        }
-      }
-
-      if (!chosen || !chosen.driver) {
-        setStatus('Could not detect a known dongle. Pick a profile manually and reconnect.');
-        try { await port?.close(); } catch {}
-        port = null;
-        return;
-      }
-
-      driver = chosen.driver;
-      pendingBuffered = chosen.buffered ?? [];
-
-      const info = port.getInfo?.() ?? {};
-      els.portInfo.textContent = `usbVendorId=0x${(info.usbVendorId ?? 0).toString(16)} usbProductId=0x${(info.usbProductId ?? 0).toString(16)} @ ${chosen.baud}${chosen.flow !== 'none' ? ' ' + chosen.flow : ''}`;
-      if (els.kind) els.kind.textContent = driver.name;
-      if (els.controls && typeof driver.renderControls === 'function') {
-        driver.renderControls(els.controls);
-      }
-      els.connect.disabled = true;
-      els.disconnect.disabled = false;
-      els.scan.disabled = false;
-      if (els.profile) els.profile.disabled = true;
-      setStatus(`Connected (${driver.name}).`);
-
-      closing = false;
-      startReadLoop(pendingBuffered);
-    } catch (e) {
-      setStatus('Connect failed: ' + e.message);
-      await cleanup();
-    }
-  }
-
-  async function onDisconnect() {
-    await setScanning(false);
-    await cleanup();
-    setStatus('Disconnected.');
-  }
-
-  async function cleanup() {
-    closing = true;
-    if (pingTimer) { clearInterval(pingTimer); pingTimer = null; }
-    if (reader) {
-      try { await reader.cancel(); } catch {}
-    }
-    try { await readLoop; } catch {}
-    reader = null;
-    readLoop = null;
-    if (writer) {
-      try { await writer.close(); } catch {}
-      try { writer.releaseLock(); } catch {}
-      writer = null;
-    }
-    if (port) {
-      try { await port.close(); } catch {}
-    }
-    port = null;
-    driver = null;
-    els.connect.disabled = false;
-    els.disconnect.disabled = true;
-    els.scan.disabled = true;
-    if (els.profile) els.profile.disabled = false;
-    if (els.kind) els.kind.textContent = '';
-    if (els.controls) els.controls.replaceChildren();
-    els.portInfo.textContent = '';
-    setIndicator('idle');
-  }
-
-  async function onToggleScan() {
-    await setScanning(!scanning);
-  }
-
-  async function setScanning(on) {
-    if (on === scanning) return;
+  function applyState(st) {
+    els.connect.disabled = st.connected || st.connecting;
+    els.disconnect.disabled = !st.connected;
+    els.scan.disabled = !st.connected;
+    if (els.profile) els.profile.disabled = st.connected || st.connecting;
+    if (els.kind) els.kind.textContent = st.driverLabel;
+    els.portInfo.textContent = st.portInfo;
     const label = els.scan.querySelector('span:last-child');
-    if (on) {
-      if (driver?.start) await driver.start(safeWrite);
-      if (driver?.sendPing && driver.pingInterval) {
-        pingTimer = setInterval(() => { driver?.sendPing(safeWrite); }, driver.pingInterval);
+    if (label) label.textContent = st.scanning ? 'Stop scan' : 'Start scan';
+    setIndicator(st.scanning ? 'scanning' : st.connected ? 'connected' : 'idle');
+    if (els.controls) {
+      if (st.connected && !controlsRendered) {
+        conn.renderDriverControls(els.controls);
+        controlsRendered = true;
+      } else if (!st.connected) {
+        els.controls.replaceChildren();
+        controlsRendered = false;
       }
-      scanning = true;
-      if (label) label.textContent = 'Stop scan';
-      setIndicator('scanning');
-      setStatus(`Scanning (${driver?.name ?? '?'}).`);
-    } else {
-      scanning = false;
-      if (pingTimer) { clearInterval(pingTimer); pingTimer = null; }
-      if (driver?.stop) await driver.stop(safeWrite);
-      if (label) label.textContent = 'Start scan';
-      setIndicator(port ? 'connected' : 'idle');
-      if (port) setStatus('Idle.');
     }
   }
 
-  function startReadLoop(buffered) {
-    const onAdvert = (advJson) => {
-      if (!scanning) return;
+  conn.subscribe({
+    onChange: applyState,
+    onStatus: setStatus,
+    onAdvert: (advJson) => {
       seen++;
       // Serialize possibly-async decodes so rows keep arrival order.
       decodeChain = decodeChain.then(async () => {
@@ -268,43 +114,12 @@ export function initSerialCore(root, { prefix, decode }) {
         appendBtRow(advJson, dec, err);
         updateCounters();
       });
-    };
-    const onLine = (line) => {
-      if (!scanning) return;
+    },
+    onLine: (line) => {
       if (els.showAll?.checked) appendRawRow(line, 'omg');
-    };
-    const onInfo = (info) => {
-      if (info?.version && els.kind) {
-        els.kind.textContent = `${driver.name} (${info.version.trim()})`;
-      }
-    };
-
-    readLoop = (async () => {
-      const cbs = { onAdvert, onLine, onInfo };
-      for (const b of buffered) driver.ingest(b, cbs);
-      // Non-fatal UART conditions (break, framing/parity error, overrun) error
-      // the readable stream but leave the port open — re-acquire a reader and
-      // keep going. Fatal errors null out port.readable, ending the loop.
-      while (!closing && port) {
-        if (!reader) {
-          if (!port.readable) break;
-          try { reader = port.readable.getReader(); } catch { break; }
-        }
-        try {
-          while (true) {
-            const { value, done } = await reader.read();
-            if (done) { closing = true; break; }
-            if (value?.length) driver.ingest(value, cbs);
-          }
-        } catch (e) {
-          if (!closing) setStatus(`Read error (${e.message}) — recovering.`);
-        } finally {
-          try { reader.releaseLock(); } catch {}
-          reader = null;
-        }
-      }
-    })();
-  }
+    },
+  });
+  applyState(conn.getState());
 
   function appendBtRow(raw, dec, err) {
     const row = document.createElement('div');
