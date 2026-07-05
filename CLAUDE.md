@@ -50,8 +50,10 @@ offer download), **Serial/theengs** ([web/serial.js](web/serial.js), Web Serial 
 **Serial/JSONata** ([web/serial-jsonata.js](web/serial-jsonata.js), same dongle
 stack but decodes via user-pasted JSONata trigger/decoder expressions), **Radio**
 ([web/radio.js](web/radio.js), `navigator.bluetooth.requestLEScan`).
-Both serial tabs share [web/serial-core.js](web/serial-core.js) (port dialog,
-autodetect, read loop, log rendering) and differ only in the `decode` callback;
+The dongle connection lives in [web/serial-conn.js](web/serial-conn.js) — a
+singleton (port, autodetect, read loop, scan state) shared by both serial tabs;
+[web/serial-core.js](web/serial-core.js) is the per-tab view (log rendering,
+counters) and tabs differ only in the `decode` callback;
 the JSONata expression pair lives in [web/jsonata-exprs.js](web/jsonata-exprs.js)
 (one localStorage-backed pair shared by the File and Serial/JSONata tabs).
 [web/decoder.js](web/decoder.js) is the browser-side wasm wrapper (parallels
