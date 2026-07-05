@@ -30,7 +30,7 @@ bun run decode-sensorlogs  # decode everything in sensorlogs/*.json
 bun run web                # zero-dep static server (serve.js) on :8000
 bun run web:dev            # vite dev server on :5173
 bun run web:build          # production build -> web/dist/
-bun run deploy-web         # vite build + rsync to host (configured via .env, see web/README.md)
+bun run deploy-web         # vite build + rsync to host (configured via .env, see README.md)
 ```
 
 ## Architecture
