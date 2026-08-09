@@ -99,10 +99,21 @@ function readFile(file) {
 }
 
 // SensorLogger zip export: per-sensor CSVs (possibly nested in a directory).
-// iOS writes a single Bluetooth.csv; Android splits adverts per device into
-// bluetooth-<MAC>.csv. Column order differs between the two, but the parser is
+// iOS writes a single Bluetooth.csv; Android splits raw adverts per device into
+// bluetooth-<MAC>.csv. Column order differs between platforms, but the parser is
 // header-keyed and the names match the JSON export's entry fields either way.
-const BT_CSV_RE = /^bluetooth(-[0-9a-f]+)?\.csv$/i;
+//
+// bluetooth-data-<device>-<uuid>.csv is a different thing: SensorLogger's own
+// already-decoded telemetry (temperature_C, battery_percent, …) with no advert
+// payload, so it is skipped. Rather than trust the name alone, a file only
+// counts as adverts if its header carries one of the payload columns.
+const BT_CSV_RE = /^bluetooth(-.+)?\.csv$/i;
+const BT_DATA_RE = /^bluetooth-data-/i;
+
+function hasAdvertColumns(rows) {
+  const row = rows[0];
+  return !!row && ('manufacturerData' in row || 'serviceData' in row);
+}
 
 async function entriesFromZip(file) {
   const entries = await readZipEntries(await file.arrayBuffer());
@@ -110,11 +121,14 @@ async function entriesFromZip(file) {
   const rows = [];
   let found = 0;
   for (const [name, bytes] of entries) {
-    if (!BT_CSV_RE.test(name.split('/').pop())) continue;
+    const base = name.split('/').pop();
+    if (!BT_CSV_RE.test(base) || BT_DATA_RE.test(base)) continue;
+    const parsed = parseCsv(decoder.decode(bytes));
+    if (!hasAdvertColumns(parsed)) continue;
     found++;
-    for (const row of parseCsv(decoder.decode(bytes))) rows.push({ sensor: 'Bluetooth', ...row });
+    for (const row of parsed) rows.push({ sensor: 'Bluetooth', ...row });
   }
-  if (!found) throw new Error('no Bluetooth CSV in archive (expected Bluetooth.csv or bluetooth-<MAC>.csv)');
+  if (!found) throw new Error('no Bluetooth advertisement CSV in archive (expected Bluetooth.csv or bluetooth-<MAC>.csv)');
   // Per-device files are each in time order; merged they are not.
   rows.sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0));
   return rows;
