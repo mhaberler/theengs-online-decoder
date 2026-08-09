@@ -5,6 +5,8 @@ import { initSerial } from './serial.js';
 import { initSerialJsonata } from './serial-jsonata.js';
 import { initRadio } from './radio.js';
 import { bindExprPanes, evaluateAdv } from './jsonata-exprs.js';
+import { readZipEntries } from './zip.js';
+import { parseCsv } from './csv.js';
 
 // --- Tabs ---
 const tabBtns = document.querySelectorAll('.tab-btn');
@@ -96,6 +98,28 @@ function readFile(file) {
   });
 }
 
+// SensorLogger zip export: per-sensor CSVs, one of them Bluetooth.csv (possibly
+// nested in a directory). Its columns match the JSON export's entry fields.
+async function entriesFromZip(file) {
+  const entries = await readZipEntries(await file.arrayBuffer());
+  let csv = null;
+  for (const [name, bytes] of entries) {
+    if (name.split('/').pop().toLowerCase() === 'bluetooth.csv') { csv = bytes; break; }
+  }
+  if (!csv) throw new Error('no Bluetooth.csv in archive');
+  return parseCsv(new TextDecoder().decode(csv)).map((row) => ({ sensor: 'Bluetooth', ...row }));
+}
+
+async function loadEntries(file) {
+  if (/\.zip$/i.test(file.name)) {
+    statusEl.textContent = 'Unpacking zip…';
+    return entriesFromZip(file);
+  }
+  const entries = JSON.parse(await readFile(file));
+  if (!Array.isArray(entries)) throw new Error('Expected a JSON array at the top level.');
+  return entries;
+}
+
 runEl.addEventListener('click', async () => {
   const file = fileEl.files && fileEl.files[0];
   if (!file) {
@@ -114,9 +138,7 @@ runEl.addEventListener('click', async () => {
   statusEl.textContent = 'Reading file…';
 
   try {
-    const text = await readFile(file);
-    const entries = JSON.parse(text);
-    if (!Array.isArray(entries)) throw new Error('Expected a JSON array at the top level.');
+    const entries = await loadEntries(file);
 
     const { out, total, decoded, byModel, errors } = await processEntries(entries, decodeFn);
 
@@ -132,7 +154,7 @@ runEl.addEventListener('click', async () => {
     if (lastBlobUrl) URL.revokeObjectURL(lastBlobUrl);
     lastBlobUrl = URL.createObjectURL(blob);
     dlEl.href = lastBlobUrl;
-    const base = file.name.replace(/\.json$/i, '');
+    const base = file.name.replace(/\.(json|zip)$/i, '');
     dlEl.download = `${base}.decoded.json`;
     downloadEl.style.display = 'block';
     statusEl.textContent = `Done. ${decoded} of ${total} entries decoded.`;

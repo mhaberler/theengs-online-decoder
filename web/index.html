@@ -77,12 +77,12 @@
 
 <!-- File tab -->
 <section class="tab-panel active" data-panel="file">
-  <p>Upload a sensorlogs-style JSON array. Each entry is decoded via TheengsDecoder (in your browser) and a <code>decoded</code> field is added. Download the result when finished.</p>
+  <p>Upload a sensorlogs-style JSON array, or a SensorLogger <code>.zip</code> export (its <code>Bluetooth.csv</code> is used). Each entry is decoded via TheengsDecoder (in your browser) and a <code>decoded</code> field is added. Download the result when finished.</p>
 
   <fieldset>
     <legend>Input</legend>
     <div class="row">
-      <input type="file" id="file" accept=".json,application/json">
+      <input type="file" id="file" accept=".json,.zip,application/json,application/zip">
       <label>Decoder
         <select id="file-mode">
           <option value="theengs" selected>theengs</option>
