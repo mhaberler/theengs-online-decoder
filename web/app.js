@@ -98,16 +98,26 @@ function readFile(file) {
   });
 }
 
-// SensorLogger zip export: per-sensor CSVs, one of them Bluetooth.csv (possibly
-// nested in a directory). Its columns match the JSON export's entry fields.
+// SensorLogger zip export: per-sensor CSVs (possibly nested in a directory).
+// iOS writes a single Bluetooth.csv; Android splits adverts per device into
+// bluetooth-<MAC>.csv. Column order differs between the two, but the parser is
+// header-keyed and the names match the JSON export's entry fields either way.
+const BT_CSV_RE = /^bluetooth(-[0-9a-f]+)?\.csv$/i;
+
 async function entriesFromZip(file) {
   const entries = await readZipEntries(await file.arrayBuffer());
-  let csv = null;
+  const decoder = new TextDecoder();
+  const rows = [];
+  let found = 0;
   for (const [name, bytes] of entries) {
-    if (name.split('/').pop().toLowerCase() === 'bluetooth.csv') { csv = bytes; break; }
+    if (!BT_CSV_RE.test(name.split('/').pop())) continue;
+    found++;
+    for (const row of parseCsv(decoder.decode(bytes))) rows.push({ sensor: 'Bluetooth', ...row });
   }
-  if (!csv) throw new Error('no Bluetooth.csv in archive');
-  return parseCsv(new TextDecoder().decode(csv)).map((row) => ({ sensor: 'Bluetooth', ...row }));
+  if (!found) throw new Error('no Bluetooth CSV in archive (expected Bluetooth.csv or bluetooth-<MAC>.csv)');
+  // Per-device files are each in time order; merged they are not.
+  rows.sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0));
+  return rows;
 }
 
 async function loadEntries(file) {
