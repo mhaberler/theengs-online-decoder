@@ -3,6 +3,7 @@
 import { loadDecoder, decodeEntry } from './decoder.js';
 import { initSerial } from './serial.js';
 import { initSerialJsonata } from './serial-jsonata.js';
+import { initSerialSensorble } from './serial-sensorble.js';
 import { initRadio } from './radio.js';
 import { bindExprPanes, evaluateAdv } from './jsonata-exprs.js';
 import { readZipEntries } from './zip.js';
@@ -193,6 +194,7 @@ runEl.addEventListener('click', async () => {
 // --- Serial tabs ---
 initSerial(document.querySelector('[data-panel="serial"]'));
 initSerialJsonata(document.querySelector('[data-panel="serial-jsonata"]'));
+initSerialSensorble(document.querySelector('[data-panel="serial-sensorble"]'));
 
 // --- BLE radio tab (opt-in via ?webble=true) ---
 const webbleEnabled = new URLSearchParams(location.search).get('webble') === 'true';

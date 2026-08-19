@@ -43,6 +43,7 @@
   },
   "dependencies": {
     "jsonata": "^2.2.2",
+    "sensor-ble": "github:mhaberler/sensor-ble#7325c27",
     "theengs-decoder": "^2.3.0"
   }
 }

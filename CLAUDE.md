@@ -48,7 +48,9 @@ in-page. Tabs in [web/app.js](web/app.js): **File** (decode a sensorlogs
 JSON array — theengs or JSONata mode — annotate each entry with a `decoded` field,
 offer download), **Serial/theengs** ([web/serial.js](web/serial.js), Web Serial API),
 **Serial/JSONata** ([web/serial-jsonata.js](web/serial-jsonata.js), same dongle
-stack but decodes via user-pasted JSONata trigger/decoder expressions), **Radio**
+stack but decodes via user-pasted JSONata trigger/decoder expressions),
+**Serial/sensor-ble** ([web/serial-sensorble.js](web/serial-sensorble.js), same
+dongle stack decoding via the `sensor-ble` library), **Radio**
 ([web/radio.js](web/radio.js), `navigator.bluetooth.requestLEScan`).
 The dongle connection lives in [web/serial-conn.js](web/serial-conn.js) — a
 singleton (port, autodetect, read loop, scan state) shared by both serial tabs;
@@ -58,6 +60,22 @@ the JSONata expression pair lives in [web/jsonata-exprs.js](web/jsonata-exprs.js
 (one localStorage-backed pair shared by the File and Serial/JSONata tabs).
 [web/decoder.js](web/decoder.js) is the browser-side wasm wrapper (parallels
 index.js).
+
+**sensor-ble decoding** ([web/sensorble-decode.js](web/sensorble-decode.js)).
+The `decode` callback for the Serial/sensor-ble tab, over the `sensor-ble`
+dependency (a bun git dependency pinned to a commit on the `mhaberler` fork —
+the npm release is stale). Only decoders with an `advertisementDecode` function
+are used; the streaming ones need a GATT connection a scanner dongle can't
+provide. `isDecoderValid` is a port of the same function in sensor-ble's Node
+harness (name → manufacturer → serviceUUID), and
+[web/buffer-shim.js](web/buffer-shim.js) supplies the Node `Buffer` the decoders
+expect — it must be imported before them, since they use a bare global.
+[web/sensorble-custom.js](web/sensorble-custom.js) installs decoders from a URL
+at runtime (fetch → blob URL → dynamic `import`, never `eval`), caching URL and
+source in localStorage so they re-register offline; a custom decoder overrides a
+built-in of the same `decoderName`. Verify shim changes against the decoders'
+own fixtures: each `node_modules/sensor-ble/devices/*.js` exports a `tests`
+array of given/expected pairs.
 
 **Dongle drivers** ([web/drivers/](web/drivers/)). Pluggable registry in
 [web/drivers/index.js](web/drivers/index.js) for USB-serial BLE-scanner dongles
@@ -76,7 +94,9 @@ each server maps that URL to the node_modules artifact: vite via `resolve.alias`
 `resolveFile`. Node imports the bare specifier directly. The jsonata UMD build
 (`node_modules/jsonata/jsonata.min.js`) is served the same way — browser code
 imports `./jsonata.min.js` through [web/jsonata-shim.js](web/jsonata-shim.js),
-which re-exports `window.jsonata`.
+which re-exports `window.jsonata`. `sensor-ble` follows the pattern too, but as
+a **directory** map (`./sensor-ble/` → `node_modules/sensor-ble/`), since
+`main.js` imports `./devices/*.js`.
 
 ## Conventions
 

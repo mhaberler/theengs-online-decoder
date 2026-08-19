@@ -46,6 +46,14 @@ function resolveFile(urlPath) {
     if (tail === 'jsonata.min.js') {
       return path.join(pkgDir, 'node_modules', 'jsonata', 'jsonata.min.js');
     }
+    // sensor-ble is a multi-file ES package (main.js imports ./devices/*.js),
+    // so the whole subtree is mapped into node_modules.
+    if (tail.startsWith('sensor-ble/')) {
+      const sub = path.normalize(path.join(pkgDir, 'node_modules', tail));
+      const modDir = path.join(pkgDir, 'node_modules', 'sensor-ble');
+      if (sub.startsWith(modDir)) return sub;
+      return null;
+    }
   }
   return abs;
 }

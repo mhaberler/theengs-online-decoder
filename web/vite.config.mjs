@@ -20,6 +20,10 @@ const WASM = resolve(
 // Same pattern for the jsonata UMD build (imported via web/jsonata-shim.js).
 const JSONATA = resolve(__dirname, '..', 'node_modules', 'jsonata', 'jsonata.min.js');
 
+// sensor-ble is a multi-file ES package (main.js imports ./devices/*.js), so the
+// whole directory is mapped rather than a single file.
+const SENSOR_BLE = resolve(__dirname, '..', 'node_modules', 'sensor-ble');
+
 export default defineConfig({
   root: __dirname,
   base: './',
@@ -27,6 +31,7 @@ export default defineConfig({
     alias: {
       './theengs_decoder_wasm.mjs': WASM,
       './jsonata.min.js': JSONATA,
+      './sensor-ble': SENSOR_BLE,
     },
   },
   build: {

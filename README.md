@@ -12,7 +12,7 @@ Live instance: <https://mhaberler.github.io/theengs-online-decoder/>
 ## Web app
 
 Static browser app for decoding BLE advertisements, either from a sensorlogs
-JSON file or live from a USB-serial scanner dongle. Four tabs:
+JSON file or live from a USB-serial scanner dongle. Five tabs:
 
 - **File** — reads a sensorlogs-style JSON array, decodes each entry, and
   offers the decorated result as a download. Each entry gets a nested
@@ -24,12 +24,14 @@ JSON file or live from a USB-serial scanner dongle. Four tabs:
   live advertisements with TheengsDecoder.
 - **Serial/JSONata** — same dongle stack, but decodes with user-supplied
   JSONata expressions instead of TheengsDecoder.
+- **Serial/sensor-ble** — same dongle stack, decoding with
+  [sensor-ble](https://github.com/tszheichoi/sensor-ble) (see below).
 - **BLE radio** — scans with the host's own radio via Web Bluetooth
   (opt-in with `?webble=true`).
 
 The dongle connection is shared between the serial tabs: connect and start a
-scan once, then switch tabs to compare theengs and JSONata decoding of the
-same live traffic. Web Serial requires Chrome/Edge (or another Chromium
+scan once, then switch tabs to compare theengs, JSONata and sensor-ble decoding
+of the same live traffic. Web Serial requires Chrome/Edge (or another Chromium
 browser); Firefox users can still use the File tab.
 
 ### Supported dongles
@@ -166,6 +168,46 @@ Result:
   "mac": "D4:15:5C:77:56:68"
 }
 ```
+
+## sensor-ble decoding
+
+The **Serial/sensor-ble** tab decodes live dongle traffic with
+[sensor-ble](https://github.com/tszheichoi/sensor-ble), the decoder library
+behind [Sensor Logger](https://www.tszheichoi.com/sensorlogger), instead of
+TheengsDecoder. It runs in-page like the other decoders — the library is pure
+dependency-free JavaScript, so only a small `Buffer` shim
+([web/buffer-shim.js](web/buffer-shim.js)) is needed to run its Node-oriented
+decoders in the browser.
+
+Only sensor-ble's **advertising-based** decoders are used: `ruuvi`, `airpods`,
+`bthome`, `mopeka`, `xiaomi_atc`, `mikrotik` and `qingping`. Its streaming
+decoders (heart rate, cycling power/speed, Muse, WitMotion) need a GATT
+connection, which a passive scanner dongle cannot provide, and are filtered out.
+
+Matching follows the library's own rule — local name, then manufacturer ID,
+then service UUID — so a decoder matches here exactly as it does under
+sensor-ble's Node harness.
+
+### Custom decoders
+
+Decoders can be installed at runtime from a URL, the same way Sensor Logger
+loads them. Paste the URL of a self-contained ES module that exports a
+`decoder` object (see the
+[sensor-ble API](https://github.com/tszheichoi/sensor-ble#sensor-ble-api))
+and press **Install**. A GitHub Gist works well — use the **raw** file URL; a
+`.../blob/...` link returns HTML and is rejected.
+
+- Installed decoders are cached in `localStorage` (URL *and* source) and
+  re-registered on every load, so they keep working offline.
+- **Reload** re-fetches from the original URL — push a change to the gist, press
+  Reload, and the new version replaces the old one.
+- A decoder whose `decoderName` matches a built-in **replaces** it; the list
+  marks it as overriding. Removing it restores the built-in.
+- Decoders without an `advertisementDecode` function are rejected, since this
+  tab never connects.
+
+> Only install decoders from sources you trust: the fetched code runs in the
+> page, like any other script on it.
 
 ## Install
 

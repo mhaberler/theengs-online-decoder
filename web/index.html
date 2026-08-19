@@ -12,7 +12,7 @@
   .repo-link svg { width: 22px; height: 22px; fill: currentColor; }
   fieldset { border: 1px solid #ccc; border-radius: 6px; margin: 1rem 0; padding: 1rem; }
   legend { padding: 0 .5rem; color: #555; }
-  #status, #ser-status, #jso-status { margin-top: .5rem; color: #444; min-height: 1.2em; }
+  #status, #ser-status, #jso-status, #sbl-status { margin-top: .5rem; color: #444; min-height: 1.2em; }
   #download { display: none; margin-top: 1rem; }
   #download a { display: inline-block; padding: .5rem 1rem; background: #2e7d32; color: #fff; border-radius: 4px; text-decoration: none; }
   #summary { font-family: ui-monospace, monospace; white-space: pre-wrap; background: #f6f6f6; padding: .75rem; border-radius: 4px; }
@@ -34,10 +34,10 @@
   .scan-indicator[data-state="scanning"]  { background: #2e7d32; box-shadow: 0 0 6px #2e7d32; animation: pulse 1.2s ease-in-out infinite; }
   @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
 
-  #ser-portinfo, #jso-portinfo { font-family: ui-monospace, monospace; font-size: 12px; color: #555; }
-  #ser-kind, #jso-kind { font-size: 12px; color: #1565c0; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #e3f2fd; }
-  #ser-kind:empty, #jso-kind:empty { display: none; }
-  #ser-counters, #jso-counters, #rad-counters { font-family: ui-monospace, monospace; font-size: 12px; color: #333; margin-left: auto; }
+  #ser-portinfo, #jso-portinfo, #sbl-portinfo { font-family: ui-monospace, monospace; font-size: 12px; color: #555; }
+  #ser-kind, #jso-kind, #sbl-kind { font-size: 12px; color: #1565c0; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #e3f2fd; }
+  #ser-kind:empty, #jso-kind:empty, #sbl-kind:empty { display: none; }
+  #ser-counters, #jso-counters, #sbl-counters, #rad-counters { font-family: ui-monospace, monospace; font-size: 12px; color: #333; margin-left: auto; }
   #rad-status { margin-top: .5rem; color: #444; min-height: 1.2em; }
 
   /* Log (shared) */
@@ -54,6 +54,22 @@
   .expr-pane textarea { width: 100%; min-height: 8em; font-family: ui-monospace, monospace; font-size: 12px; box-sizing: border-box; }
   .expr-pane label { display: block; font-weight: 600; margin-bottom: .25rem; }
   .expr-error { color: #c62828; font-family: ui-monospace, monospace; font-size: 12px; min-height: 1.2em; white-space: pre-wrap; }
+  /* sensor-ble custom decoders */
+  #sbl-custom-url { flex: 1; min-width: 20rem; font-family: ui-monospace, monospace; font-size: 12px; padding: .4rem; }
+  .decoder-builtins { font-size: 12px; color: #555; margin-bottom: .5rem; }
+  .decoder-builtins span { font-family: ui-monospace, monospace; color: #333; }
+  .decoder-help { font-size: 12px; color: #555; margin: .25rem 0 .75rem; }
+  .decoder-list { margin-top: .75rem; display: flex; flex-direction: column; gap: .5rem; }
+  .decoder-empty { font-size: 12px; color: #777; }
+  .decoder-row { border: 1px solid #ddd; border-left: 3px solid #2e7d32; border-radius: 4px; padding: .5rem .6rem; }
+  .decoder-row.decoder-broken { border-left-color: #c62828; }
+  .decoder-name { font-weight: 600; font-family: ui-monospace, monospace; }
+  .decoder-badge { margin-left: .5rem; font-family: system-ui, sans-serif; font-size: 11px; font-weight: 600; color: #8a5000; background: #fff3e0; border-radius: 999px; padding: 2px 8px; }
+  .decoder-url { display: block; font-size: 11px; font-family: ui-monospace, monospace; color: #1565c0; word-break: break-all; margin: .15rem 0 .4rem; }
+  .decoder-error { color: #c62828; font-size: 12px; margin-bottom: .4rem; white-space: pre-wrap; }
+  .decoder-actions { display: flex; gap: .4rem; }
+  .decoder-actions button { padding: .25rem .6rem; font-size: 12px; }
+
   .log-head { font-weight: 600; }
   .log-decoded-json, .log-raw-json { margin: .25rem 0 0; padding: .25rem .5rem; background: #f4f4f4; border-radius: 2px; white-space: pre-wrap; }
   details > summary { cursor: pointer; color: #555; font-size: 11px; }
@@ -72,6 +88,7 @@
   <button class="tab-btn active" data-tab="file" role="tab">File</button>
   <button class="tab-btn" data-tab="serial" role="tab">Serial/theengs</button>
   <button class="tab-btn" data-tab="serial-jsonata" role="tab">Serial/JSONata</button>
+  <button class="tab-btn" data-tab="serial-sensorble" role="tab">Serial/sensor-ble</button>
   <button class="tab-btn" data-tab="radio" role="tab">BLE radio</button>
 </div>
 
@@ -195,6 +212,58 @@
       <span id="jso-counters">decoded: 0 / seen: 0</span>
     </div>
     <div id="jso-log" class="live-log" aria-live="polite"></div>
+  </fieldset>
+</section>
+
+<!-- Serial/sensor-ble tab -->
+<section class="tab-panel" data-panel="serial-sensorble">
+  <p>Connect a USB-serial BLE scanner dongle (same dongles as Serial/theengs) and decode
+    advertisements with <a href="https://github.com/tszheichoi/sensor-ble" target="_blank" rel="noopener">sensor-ble</a>,
+    the decoder library behind Sensor Logger. Only its advertising-based decoders are used —
+    streaming decoders need a GATT connection, which a passive scanner cannot provide.</p>
+
+  <fieldset>
+    <legend>Port</legend>
+    <div class="row">
+      <button id="sbl-connect">Connect&hellip;</button>
+      <button id="sbl-disconnect">Disconnect</button>
+      <label>Profile
+        <select id="sbl-profile"></select>
+      </label>
+      <span id="sbl-kind"></span>
+      <span id="sbl-portinfo"></span>
+    </div>
+    <div id="sbl-driver-controls"></div>
+    <div id="sbl-status">Initializing&hellip;</div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Decoders</legend>
+    <div class="decoder-builtins">Built-in: <span id="sbl-builtins"></span></div>
+    <p class="decoder-help">Install a custom decoder from a URL serving a self-contained ES module
+      that exports a <code>decoder</code> object (see the
+      <a href="https://github.com/tszheichoi/sensor-ble#loading-a-custom-decoder-into-sensor-logger" target="_blank" rel="noopener">sensor-ble API</a>).
+      Use the <strong>raw</strong> file URL. Installed decoders are cached locally and re-registered on
+      every load; one whose <code>decoderName</code> matches a built-in replaces it.
+      <strong>Only install decoders you trust — the code runs in this page.</strong></p>
+    <div class="row">
+      <input type="url" id="sbl-custom-url" placeholder="https://gist.githubusercontent.com/&hellip;/raw/&hellip;.js" spellcheck="false">
+      <button id="sbl-custom-install">Install</button>
+    </div>
+    <div id="sbl-custom-error" class="expr-error"></div>
+    <div id="sbl-custom-list" class="decoder-list"></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Scan</legend>
+    <div class="row">
+      <button id="sbl-scan"><span id="sbl-indicator" class="scan-indicator" data-state="idle"></span><span>Start scan</span></button>
+      <button id="sbl-clear">Clear log</button>
+      <label><input type="checkbox" id="sbl-showall"> Show all lines</label>
+      <label><input type="checkbox" id="sbl-onlydecoded"> Only decoded</label>
+      <span id="sbl-counters">decoded: 0 / seen: 0</span>
+    </div>
+    <div id="sbl-log" class="live-log" aria-live="polite"></div>
   </fieldset>
 </section>
 
