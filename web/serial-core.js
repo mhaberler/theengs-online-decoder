@@ -28,6 +28,8 @@ export function initSerialCore(root, { prefix, decode }) {
     status:     q('status'),
     indicator:  q('indicator'),
     log:        q('log'),
+    search:     q('search'),
+    searchCount: q('searchcount'),
     portInfo:   q('portinfo'),
     kind:       q('kind'),
     controls:   q('driver-controls'),
@@ -36,6 +38,7 @@ export function initSerialCore(root, { prefix, decode }) {
 
   let seen = 0;
   let decoded = 0;
+  let searchTerm = '';
   let autoScroll = true;
   let controlsRendered = false;
   let decodeChain = Promise.resolve();
@@ -67,12 +70,19 @@ export function initSerialCore(root, { prefix, decode }) {
   els.connect.addEventListener('click', () => conn.connect(els.profile?.value ?? 'auto'));
   els.disconnect.addEventListener('click', () => conn.disconnect());
   els.scan.addEventListener('click', () => conn.toggleScan());
+  // The search term deliberately survives a clear: clearing rows is not
+  // clearing the query.
   els.clear.addEventListener('click', () => {
     els.log.replaceChildren();
-    seen = 0; decoded = 0; lastSeen.clear(); updateCounters();
+    seen = 0; decoded = 0; lastSeen.clear(); updateCounters(); updateSearchCount();
   });
   els.onlyDecoded?.addEventListener('change', () => {
     els.log.classList.toggle('only-decoded', els.onlyDecoded.checked);
+  });
+  els.search?.addEventListener('input', () => {
+    searchTerm = els.search.value.trim().toLowerCase();
+    for (const row of els.log.children) applySearch(row);
+    updateSearchCount();
   });
 
   function applyState(st) {
@@ -175,10 +185,33 @@ export function initSerialCore(root, { prefix, decode }) {
     pushRow(row);
   }
 
+  // Filtering is done by marking rows and letting CSS hide them (as the
+  // only-decoded checkbox does), so the two filters compose and rows arriving
+  // mid-scan are filtered as they render. textContent covers the header, the
+  // decoded JSON and the raw JSON inside the collapsed <details> — which is why
+  // this finds payloads the browser's own find-in-page cannot.
+  function applySearch(row) {
+    const hide = searchTerm !== '' && !row.textContent.toLowerCase().includes(searchTerm);
+    row.classList.toggle('search-hidden', hide);
+  }
+
+  function updateSearchCount() {
+    if (!els.searchCount) return;
+    if (!searchTerm) {
+      els.searchCount.textContent = '';
+      return;
+    }
+    let shown = 0;
+    for (const row of els.log.children) if (!row.classList.contains('search-hidden')) shown++;
+    els.searchCount.textContent = `${shown} shown`;
+  }
+
   function pushRow(row) {
+    applySearch(row);
     els.log.appendChild(row);
     while (els.log.childElementCount > MAX_ROWS) els.log.firstElementChild.remove();
     if (autoScroll) els.log.scrollTop = els.log.scrollHeight;
+    updateSearchCount();
   }
 
   function setStatus(msg) { els.status.textContent = msg; }

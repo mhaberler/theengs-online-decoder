@@ -40,6 +40,8 @@ export function initRadio(root) {
     status:    root.querySelector('#rad-status'),
     indicator: root.querySelector('#rad-indicator'),
     log:       root.querySelector('#rad-log'),
+    search:    root.querySelector('#rad-search'),
+    searchCount: root.querySelector('#rad-searchcount'),
   };
 
   let decoder = null;
@@ -47,6 +49,7 @@ export function initRadio(root) {
   let scanning = false;
   let seen = 0;
   let decoded = 0;
+  let searchTerm = '';
   let autoScroll = true;
 
   loadDecoder().then((d) => { decoder = d; setStatus('Decoder ready. Click Start scan.'); })
@@ -59,9 +62,16 @@ export function initRadio(root) {
   });
 
   els.scan.addEventListener('click', onToggleScan);
+  // The search term deliberately survives a clear: clearing rows is not
+  // clearing the query.
   els.clear.addEventListener('click', () => {
     els.log.replaceChildren();
-    seen = 0; decoded = 0; updateCounters();
+    seen = 0; decoded = 0; updateCounters(); updateSearchCount();
+  });
+  els.search?.addEventListener('input', () => {
+    searchTerm = els.search.value.trim().toLowerCase();
+    for (const row of els.log.children) applySearch(row);
+    updateSearchCount();
   });
 
   async function onToggleScan() {
@@ -141,9 +151,29 @@ export function initRadio(root) {
     det.appendChild(rawPre);
     row.appendChild(det);
 
+    applySearch(row);
     els.log.appendChild(row);
     while (els.log.childElementCount > MAX_ROWS) els.log.firstElementChild.remove();
     if (autoScroll) els.log.scrollTop = els.log.scrollHeight;
+    updateSearchCount();
+  }
+
+  // Mirrors the same functions in serial-core.js — this tab renders its own
+  // rows rather than going through initSerialCore.
+  function applySearch(row) {
+    const hide = searchTerm !== '' && !row.textContent.toLowerCase().includes(searchTerm);
+    row.classList.toggle('search-hidden', hide);
+  }
+
+  function updateSearchCount() {
+    if (!els.searchCount) return;
+    if (!searchTerm) {
+      els.searchCount.textContent = '';
+      return;
+    }
+    let shown = 0;
+    for (const row of els.log.children) if (!row.classList.contains('search-hidden')) shown++;
+    els.searchCount.textContent = `${shown} shown`;
   }
 
   function setStatus(msg) { els.status.textContent = msg; }

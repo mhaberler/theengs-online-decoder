@@ -49,6 +49,11 @@
   .log-row.log-misc      { border-left-color: #ccc; color: #666; }
   .log-row.log-error     { border-left-color: #c62828; }
   .live-log.only-decoded .log-undecoded { display: none; }
+  .live-log .search-hidden { display: none; }
+
+  /* Log search */
+  .log-search { flex: 1; min-width: 12rem; font-family: ui-monospace, monospace; font-size: 12px; padding: .35rem .5rem; }
+  .log-searchcount { font-family: ui-monospace, monospace; font-size: 12px; color: #555; min-width: 5.5em; }
 
   /* JSONata expression panes */
   .expr-pane textarea { width: 100%; min-height: 8em; font-family: ui-monospace, monospace; font-size: 12px; box-sizing: border-box; }
@@ -162,6 +167,10 @@
       <label><input type="checkbox" id="ser-showall"> Show all lines</label>
       <span id="ser-counters">decoded: 0 / seen: 0</span>
     </div>
+    <div class="row">
+      <input type="search" id="ser-search" class="log-search" placeholder="Filter rows&hellip; (MAC, model, field, hex payload)" spellcheck="false">
+      <span id="ser-searchcount" class="log-searchcount"></span>
+    </div>
     <div id="ser-log" class="live-log" aria-live="polite"></div>
   </fieldset>
 </section>
@@ -210,6 +219,10 @@
       <button id="jso-clear">Clear log</button>
       <label><input type="checkbox" id="jso-onlydecoded"> Only decoded</label>
       <span id="jso-counters">decoded: 0 / seen: 0</span>
+    </div>
+    <div class="row">
+      <input type="search" id="jso-search" class="log-search" placeholder="Filter rows&hellip; (MAC, model, field, hex payload)" spellcheck="false">
+      <span id="jso-searchcount" class="log-searchcount"></span>
     </div>
     <div id="jso-log" class="live-log" aria-live="polite"></div>
   </fieldset>
@@ -263,6 +276,10 @@
       <label><input type="checkbox" id="sbl-onlydecoded"> Only decoded</label>
       <span id="sbl-counters">decoded: 0 / seen: 0</span>
     </div>
+    <div class="row">
+      <input type="search" id="sbl-search" class="log-search" placeholder="Filter rows&hellip; (MAC, model, field, hex payload)" spellcheck="false">
+      <span id="sbl-searchcount" class="log-searchcount"></span>
+    </div>
     <div id="sbl-log" class="live-log" aria-live="polite"></div>
   </fieldset>
 </section>
@@ -279,6 +296,10 @@
       <span id="rad-counters">decoded: 0 / seen: 0</span>
     </div>
     <div id="rad-status">Idle.</div>
+    <div class="row">
+      <input type="search" id="rad-search" class="log-search" placeholder="Filter rows&hellip; (MAC, model, field, hex payload)" spellcheck="false">
+      <span id="rad-searchcount" class="log-searchcount"></span>
+    </div>
     <div id="rad-log" class="live-log" aria-live="polite"></div>
   </fieldset>
 </section>
