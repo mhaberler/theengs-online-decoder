@@ -1,6 +1,6 @@
 'use strict';
 
-import * as conn from './serial-conn.js';
+import * as serialConn from './serial-conn.js';
 
 const MAX_ROWS = 2000;
 
@@ -15,7 +15,12 @@ const LAST_SEEN_TTL_MS = 60_000;
 // (sync or async, returning a decoded object or null; a throw renders an error
 // row and scanning continues). Connection and scan state are shared — buttons
 // in any tab drive the same dongle, and all tabs mirror its state.
-export function initSerialCore(root, { prefix, decode }) {
+// `conn` defaults to the dongle connection; any object with the same interface
+// (available, getState, subscribe, toggleScan; optionally connect, disconnect,
+// PROFILES, renderDriverControls) can drive the view instead, e.g. a phone's
+// BLE radio in the Capacitor app. Connection controls may be absent from the
+// markup.
+export function initSerialCore(root, { prefix, decode, conn = serialConn }) {
   const q = (id) => root.querySelector(`#${prefix}-${id}`);
   const els = {
     connect:    q('connect'),
@@ -45,7 +50,7 @@ export function initSerialCore(root, { prefix, decode }) {
   const lastSeen = new Map();
 
   if (els.profile && !els.profile.dataset.populated) {
-    for (const p of conn.PROFILES) {
+    for (const p of conn.PROFILES ?? []) {
       const opt = document.createElement('option');
       opt.value = p.id;
       opt.textContent = p.label;
@@ -55,9 +60,9 @@ export function initSerialCore(root, { prefix, decode }) {
     els.profile.dataset.populated = '1';
   }
 
-  if (!('serial' in navigator)) {
-    setStatus('WebSerial unavailable in this browser. Use Chrome/Edge on https or localhost.');
-    els.connect.disabled = true;
+  if (!conn.available()) {
+    setStatus(conn.unavailableMessage);
+    if (els.connect) els.connect.disabled = true;
     if (els.profile) els.profile.disabled = true;
     return { setStatus, available: false };
   }
@@ -67,8 +72,8 @@ export function initSerialCore(root, { prefix, decode }) {
     autoScroll = nearBottom;
   });
 
-  els.connect.addEventListener('click', () => conn.connect(els.profile?.value ?? 'auto'));
-  els.disconnect.addEventListener('click', () => conn.disconnect());
+  els.connect?.addEventListener('click', () => conn.connect(els.profile?.value ?? 'auto'));
+  els.disconnect?.addEventListener('click', () => conn.disconnect());
   els.scan.addEventListener('click', () => conn.toggleScan());
   // The search term deliberately survives a clear: clearing rows is not
   // clearing the query.
@@ -86,18 +91,18 @@ export function initSerialCore(root, { prefix, decode }) {
   });
 
   function applyState(st) {
-    els.connect.disabled = st.connected || st.connecting;
-    els.disconnect.disabled = !st.connected;
+    if (els.connect) els.connect.disabled = st.connected || st.connecting;
+    if (els.disconnect) els.disconnect.disabled = !st.connected;
     els.scan.disabled = !st.connected;
     if (els.profile) els.profile.disabled = st.connected || st.connecting;
     if (els.kind) els.kind.textContent = st.driverLabel;
-    els.portInfo.textContent = st.portInfo;
+    if (els.portInfo) els.portInfo.textContent = st.portInfo;
     const label = els.scan.querySelector('span:last-child');
     if (label) label.textContent = st.scanning ? 'Stop scan' : 'Start scan';
     setIndicator(st.scanning ? 'scanning' : st.connected ? 'connected' : 'idle');
     if (els.controls) {
       if (st.connected && !controlsRendered) {
-        conn.renderDriverControls(els.controls);
+        conn.renderDriverControls?.(els.controls);
         controlsRendered = true;
       } else if (!st.connected) {
         els.controls.replaceChildren();

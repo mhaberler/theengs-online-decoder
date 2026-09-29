@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Sensor-BLE</string>
+    <string name="title_activity_main">Sensor-BLE</string>
+    <string name="package_name">com.haberler.sensorble</string>
+    <string name="custom_url_scheme">com.haberler.sensorble</string>
+</resources>

@@ -1,0 +1,33 @@
+{
+  "name": "sensor-ble-app",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Sensor-BLE: Capacitor app decoding phone BLE scans with sensor-ble decoders",
+  "license": "GPL-3.0-only",
+  "config": {
+    "port": "8101"
+  },
+  "scripts": {
+    "dev": "vite --port=$npm_package_config_port --host",
+    "build": "vite build",
+    "sync": "vite build && bunx cap sync",
+    "run-android": "bunx cap run android --target R3CX90A30EW",
+    "run-ios": "bunx cap run ios --target 00008140-0002692C1E79801C",
+    "debug-android": "bunx cap run android --live-reload --port $npm_package_config_port --target R3CX90A30EW",
+    "debug-ios": "bunx cap run ios --live-reload --port $npm_package_config_port --target 00008140-0002692C1E79801C",
+    "open-ios": "bunx cap open ios",
+    "open-android": "bunx cap open android"
+  },
+  "dependencies": {
+    "@capacitor-community/bluetooth-le": "^8.2.0",
+    "@capacitor/android": "^8.3.4",
+    "@capacitor/core": "^8.3.4",
+    "@capacitor/ios": "^8.3.4",
+    "@capacitor/preferences": "^8.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.3.4",
+    "vite": "^8.3.1"
+  }
+}

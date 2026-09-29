@@ -16,9 +16,20 @@ const KEY = 'sensorble-custom-decoders';
 
 let installed = []; // [{ url, source, decoderName, installedAt, decoder, error }]
 
-function load() {
+// Async key/value store for the cache. localStorage by default; the Capacitor
+// app swaps in @capacitor/preferences, since iOS may evict WebView storage.
+let storage = {
+  get: async (key) => localStorage.getItem(key),
+  set: async (key, value) => localStorage.setItem(key, value),
+};
+
+export function setStorage(s) {
+  storage = s;
+}
+
+async function load() {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = await storage.get(KEY);
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -29,7 +40,8 @@ function persist() {
   const plain = installed.map(({ url, source, decoderName, installedAt }) => ({
     url, source, decoderName, installedAt,
   }));
-  localStorage.setItem(KEY, JSON.stringify(plain));
+  storage.set(KEY, JSON.stringify(plain))
+    .catch((e) => console.error('sensorble-custom: persist failed', e));
 }
 
 function republish() {
@@ -79,7 +91,7 @@ async function fetchSource(url) {
 // Restore cached decoders without touching the network.
 export async function restore() {
   installed = [];
-  for (const entry of load()) {
+  for (const entry of await load()) {
     const rec = { ...entry, decoder: null, error: null };
     try {
       rec.decoder = await importDecoder(entry.source);

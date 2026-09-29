@@ -1,0 +1,8 @@
+{
+  "appId": "com.haberler.sensorble",
+  "appName": "Sensor-BLE",
+  "webDir": "dist",
+  "android": {
+    "edgeToEdge": true
+  }
+}

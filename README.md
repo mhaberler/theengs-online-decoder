@@ -265,6 +265,40 @@ gh gist view <id> --raw -f theengs.js      # print a published file
 gh gist delete <id>                        # unpublish — also drop its entry from .gists.json
 ```
 
+## Mobile app (Sensor-BLE)
+
+[app/](app/) is a Capacitor app for iOS and Android: the Serial/sensor-ble tab
+running on the **phone's own BLE radio** instead of a dongle. It reuses the
+web modules directly (log view, sensor-ble decoding, custom decoder install),
+so built-in decoders and decoders installed from a URL — including the
+[Theengs decoder](#theengs-as-a-sensor-ble-decoder) gist — work as in the
+browser. Installed decoders are stored with `@capacitor/preferences` and keep
+working offline.
+
+```sh
+bun install                 # repo root (sensor-ble lives here)
+cd app && bun install
+bun run sync                # vite build + cap sync
+bun run run-android         # build + install on the configured Android device
+bun run run-ios             # build + install on the configured iPhone
+bun run debug-android       # same, with live reload from the vite dev server
+bun run open-ios            # open in Xcode (signing, other devices)
+```
+
+The `run-*` scripts target specific devices (`--target` in
+[app/package.json](app/package.json)); change them for yours
+(`bunx cap run android --list`). iOS signing uses the development team set in
+the Xcode project.
+
+Platform limits:
+- **iOS** hides MAC addresses (the id is a per-phone UUID), so decoders that
+  need the MAC fail; iOS also strips iBeacon advertisements, and scanning is
+  foreground-only.
+- **Android** requests location permission too (asserting "never for
+  location" would filter some beacons), and returns no scan results while
+  system location is off — the app then offers a button to open location
+  settings.
+
 ## Install
 
 ```sh

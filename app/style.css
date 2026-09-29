@@ -1,0 +1,56 @@
+/* Copied from web/index.html (sensor-ble tab + shared log), adapted for phones:
+   safe-area insets, touch-sized controls, log fills the remaining height. */
+:root { color-scheme: light; }
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  font: 15px/1.45 system-ui, sans-serif; margin: 0; background: #fff; color: #222;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+main { display: flex; flex-direction: column; height: 100%; padding: .5rem .75rem; gap: .5rem; }
+h1 { font-size: 1.15rem; margin: 0; }
+button { padding: .6rem 1rem; font-size: 15px; min-height: 44px; }
+button:disabled { opacity: .5; }
+.row { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+code { font-size: 12px; }
+
+#sbl-status { color: #444; min-height: 1.2em; font-size: 13px; }
+#sbl-counters { font-family: ui-monospace, monospace; font-size: 12px; color: #333; margin-left: auto; }
+
+.scan-indicator { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #999; vertical-align: middle; margin-right: .4rem; }
+.scan-indicator[data-state="idle"]      { background: #999; }
+.scan-indicator[data-state="connected"] { background: #1976d2; }
+.scan-indicator[data-state="scanning"]  { background: #2e7d32; box-shadow: 0 0 6px #2e7d32; animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
+
+/* Decoders (collapsible to leave room for the log) */
+details.decoders { border: 1px solid #ccc; border-radius: 6px; padding: .4rem .6rem; }
+details.decoders > summary { cursor: pointer; font-weight: 600; font-size: 14px; color: #333; }
+#sbl-custom-url { flex: 1; min-width: 0; font-family: ui-monospace, monospace; font-size: 13px; padding: .55rem; }
+.decoder-builtins { font-size: 12px; color: #555; margin: .4rem 0; }
+.decoder-builtins span { font-family: ui-monospace, monospace; color: #333; }
+.decoder-help { font-size: 12px; color: #555; margin: .25rem 0 .5rem; }
+.decoder-list { margin-top: .5rem; display: flex; flex-direction: column; gap: .5rem; }
+.decoder-empty { font-size: 12px; color: #777; }
+.decoder-row { border: 1px solid #ddd; border-left: 3px solid #2e7d32; border-radius: 4px; padding: .5rem .6rem; }
+.decoder-row.decoder-broken { border-left-color: #c62828; }
+.decoder-name { font-weight: 600; font-family: ui-monospace, monospace; }
+.decoder-badge { margin-left: .5rem; font-family: system-ui, sans-serif; font-size: 11px; font-weight: 600; color: #8a5000; background: #fff3e0; border-radius: 999px; padding: 2px 8px; }
+.decoder-url { display: block; font-size: 11px; font-family: ui-monospace, monospace; color: #1565c0; word-break: break-all; margin: .15rem 0 .4rem; }
+.decoder-error, .expr-error { color: #c62828; font-family: ui-monospace, monospace; font-size: 12px; white-space: pre-wrap; }
+.decoder-actions { display: flex; gap: .4rem; }
+.decoder-actions button { padding: .3rem .8rem; font-size: 13px; min-height: 36px; }
+
+/* Log */
+.log-search { flex: 1; min-width: 0; font-family: ui-monospace, monospace; font-size: 13px; padding: .5rem; }
+.log-searchcount { font-family: ui-monospace, monospace; font-size: 12px; color: #555; }
+.live-log { flex: 1; min-height: 0; overflow: auto; -webkit-overflow-scrolling: touch; background: #fafafa; border: 1px solid #ddd; border-radius: 4px; padding: .4rem; font-family: ui-monospace, monospace; font-size: 11px; }
+.log-row { padding: .3rem .45rem; margin: .25rem 0; border-left: 3px solid #bbb; background: #fff; border-radius: 2px; }
+.log-row.log-decoded   { border-left-color: #2e7d32; }
+.log-row.log-undecoded { border-left-color: #999; }
+.log-row.log-error     { border-left-color: #c62828; }
+.live-log.only-decoded .log-undecoded { display: none; }
+.live-log .search-hidden { display: none; }
+.log-head { font-weight: 600; word-break: break-all; }
+.log-decoded-json, .log-raw-json { margin: .25rem 0 0; padding: .25rem .5rem; background: #f4f4f4; border-radius: 2px; white-space: pre-wrap; word-break: break-all; }
+details > summary { cursor: pointer; color: #555; font-size: 11px; }

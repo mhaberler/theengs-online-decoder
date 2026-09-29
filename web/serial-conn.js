@@ -38,6 +38,13 @@ function emit(fn, ...args) {
 function emitChange() { emit('onChange', getState()); }
 function status(msg) { emit('onStatus', msg); }
 
+export const unavailableMessage =
+  'WebSerial unavailable in this browser. Use Chrome/Edge on https or localhost.';
+
+export function available() {
+  return 'serial' in navigator;
+}
+
 export function getState() {
   return {
     connected: !!port && !!driver,

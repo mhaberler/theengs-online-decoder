@@ -50,16 +50,27 @@ function normalizeUuid(u) {
 // Advertisement entries arrive in the OMG shape produced by web/drivers/ad.js:
 // hex strings, manufacturerdata including the 2-byte company ID. File-tab-style
 // camelCase spellings are accepted too, as decoder.js's buildDecoderInput does.
+// An entry may instead carry every service-data element as `serviceDataMap`
+// ({ uuid: hex }) — the phone BLE scan in the Capacitor app reports them all.
 function readEntry(entry) {
-  let sd = entry.serviceData ?? entry.servicedata ?? '';
-  const colon = sd.indexOf(':');
-  if (colon >= 0) sd = sd.slice(colon + 1);
   const md = entry.manufacturerData ?? entry.manufacturerdata ?? '';
-  const uuid = normalizeUuid(entry.serviceDataUuid ?? entry.servicedatauuid);
+  const serviceDataMap = {};
+  if (entry.serviceDataMap) {
+    for (const [u, hex] of Object.entries(entry.serviceDataMap)) {
+      const uuid = normalizeUuid(u);
+      if (uuid && hex) serviceDataMap[uuid] = Buffer.from(hex, 'hex');
+    }
+  } else {
+    let sd = entry.serviceData ?? entry.servicedata ?? '';
+    const colon = sd.indexOf(':');
+    if (colon >= 0) sd = sd.slice(colon + 1);
+    const uuid = normalizeUuid(entry.serviceDataUuid ?? entry.servicedatauuid);
+    if (sd && uuid) serviceDataMap[uuid] = Buffer.from(sd, 'hex');
+  }
   return {
     manufacturerData: md ? Buffer.from(md, 'hex') : undefined,
-    serviceDataMap: sd && uuid ? { [uuid]: Buffer.from(sd, 'hex') } : {},
-    serviceUuids: uuid ? [uuid] : [],
+    serviceDataMap,
+    serviceUuids: Object.keys(serviceDataMap),
     localName: entry.name ?? entry.localName ?? '',
   };
 }
