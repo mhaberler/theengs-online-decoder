@@ -70,6 +70,8 @@ set_secret() {
 if (( ios )); then
   need ASC_KEY_PATH ASC_KEY_ID ASC_ISSUER_ID
   need_file "$ASC_KEY_PATH"
+  grep -q -- '-----BEGIN PRIVATE KEY-----' "${ASC_KEY_PATH/#\~/$HOME}" \
+    || { echo "ASC_KEY_PATH is not an App Store Connect .p8 key: $ASC_KEY_PATH" >&2; exit 2; }
   set_secret ASC_KEY_P8 "$(base64 < "${ASC_KEY_PATH/#\~/$HOME}" | tr -d '\n')"
   set_secret ASC_KEY_ID "$ASC_KEY_ID"
   set_secret ASC_ISSUER_ID "$ASC_ISSUER_ID"

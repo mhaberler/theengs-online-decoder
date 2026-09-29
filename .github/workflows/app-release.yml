@@ -107,7 +107,13 @@ jobs:
             echo "::error::ASC_* secrets missing — run scripts/sync-app-secrets.sh"; exit 1
           fi
           mkdir -p "$RUNNER_TEMP/asc"
-          echo "$P8" | base64 -d > "$RUNNER_TEMP/asc/AuthKey.p8"
+          # Apple's tools expect the downloaded key's name, AuthKey_<KEY_ID>.p8.
+          key="$RUNNER_TEMP/asc/AuthKey_$KEY_ID.p8"
+          echo "$P8" | base64 -d > "$key"
+          if ! grep -q -- '-----BEGIN PRIVATE KEY-----' "$key"; then
+            echo "::error::ASC_KEY_P8 does not decode to a .p8 private key (check ASC_KEY_PATH, re-run scripts/sync-app-secrets.sh)"; exit 1
+          fi
+          echo "ASC_KEY_FILE=$key" >> "$GITHUB_ENV"
       # The archive is built unsigned; signing happens at export, where
       # -allowProvisioningUpdates + the API key lets Xcode fetch the profile and
       # use the cloud-managed distribution certificate. Archiving signed would
@@ -130,7 +136,7 @@ jobs:
             -exportOptionsPlist ci/ExportOptions-export.plist \
             -exportPath "$RUNNER_TEMP/export" \
             -allowProvisioningUpdates \
-            -authenticationKeyPath "$RUNNER_TEMP/asc/AuthKey.p8" \
+            -authenticationKeyPath "$ASC_KEY_FILE" \
             -authenticationKeyID "${{ secrets.ASC_KEY_ID }}" \
             -authenticationKeyIssuerID "${{ secrets.ASC_ISSUER_ID }}"
           mkdir -p "$RUNNER_TEMP/out"
@@ -144,7 +150,7 @@ jobs:
             -exportOptionsPlist ci/ExportOptions-upload.plist \
             -exportPath "$RUNNER_TEMP/upload" \
             -allowProvisioningUpdates \
-            -authenticationKeyPath "$RUNNER_TEMP/asc/AuthKey.p8" \
+            -authenticationKeyPath "$ASC_KEY_FILE" \
             -authenticationKeyID "${{ secrets.ASC_KEY_ID }}" \
             -authenticationKeyIssuerID "${{ secrets.ASC_ISSUER_ID }}"
       - uses: actions/upload-artifact@v4
