@@ -10,8 +10,8 @@ import { resolveCatalog, normalizeIndex } from './catalog-util.js';
 
 const KEY = 'sensorble-catalogs';
 
-// Shipped preset, removable. Switch to the real catalog once it exists.
-export const PRESET_CATALOG = 'https://mhaberler.github.io/sensor-ble-decoder-catalog/';
+// Shipped preset (first run only), removable.
+export const PRESET_CATALOG = 'https://mhaberler.github.io/sensor-ble-decoders-custom/';
 
 // [{ url, jsonUrl, title, description, homepage, entries, fetchedAt, error }]
 let catalogs = [];

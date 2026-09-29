@@ -14,6 +14,9 @@ const path = require('node:path');
 
 const SRC = require.resolve('theengs-decoder/dist/theengs_decoder_wasm.mjs');
 const VERSION = require('theengs-decoder/package.json').version;
+// Bump when only the glue/patching changes; catalogs compare the full
+// version (theengs-decoder version + this revision) to offer updates.
+const GENERATOR_REVISION = 1;
 const OUT = path.join(__dirname, '..', 'sensor-ble-decoders', 'theengs.js');
 
 // [description, search, replacement, expected occurrence count]
@@ -120,7 +123,31 @@ export const decoder = {
   matchAll: true,
   variableFormat: true,
   advertisementDecode: decodeTheengs,
+
+  // Catalog metadata (ignored by hosts that don't know it).
+  title: 'TheengsDecoder (all supported devices)',
+  description: 'Decodes every device TheengsDecoder supports. A catch-all fallback (matchAll): tried after all other decoders; hosts without matchAll, such as Sensor Logger today, never use it.',
+  version: '${VERSION}.${GENERATOR_REVISION}',
+  author: 'Theengs / Michael Haberler (packaging)',
+  license: 'GPL-3.0-only',
+  tags: ['theengs', 'catch-all'],
 };
+
+// Regression vectors for catalog builds: a Xiaomi RoPot service-data advert,
+// and a payload no Theengs model matches.
+export const tests = [
+  {
+    given: {
+      serviceData: { fe95: '71205d0183d20c6d8d7cc40d08100103' },
+      meta: { name: 'x', id: 'AA:BB:CC:DD:EE:FF' },
+    },
+    expected: {
+      brand: 'Xiaomi', model: 'RoPot', model_id: 'HHCCPOT002', type: 'PLANT',
+      moi: 3, mac: 'C4:7C:8D:6D:0C:D2',
+    },
+  },
+  { given: { manufacturerData: 'ffff00' }, expected: null },
+];
 `;
 
 function build() {

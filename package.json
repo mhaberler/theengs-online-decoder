@@ -35,6 +35,7 @@
     "deploy-web": "bash scripts/deploy-web.sh",
     "build-sensorble-theengs": "node scripts/build-sensorble-theengs.js",
     "publish-gist": "node scripts/publish-gist.js",
+    "publish-catalog": "node scripts/publish-catalog.js",
     "test": "node --test test/*.test.js",
     "version:major": "node scripts/version.js bump major",
     "version:minor": "node scripts/version.js bump minor",

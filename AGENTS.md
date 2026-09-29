@@ -31,6 +31,7 @@ bun run decode-log <file>  # decode a sensorlogs-style JSON file from the CLI
 bun run decode-sensorlogs  # decode everything in sensorlogs/*.json
 bun run build-sensorble-theengs  # regenerate sensor-ble-decoders/theengs.js
 bun run publish-gist <name>...   # publish sensor-ble-decoders/<name> as secret gist(s), print raw URLs
+bun run publish-catalog          # regenerate theengs.js, copy into ../sensor-ble-decoders-custom, run its catalog build
 
 cd app && bun run sync          # mobile app: vite build + cap sync (bun install in root and app/ first)
 cd app && bun run run-android   # / run-ios — install on the configured device

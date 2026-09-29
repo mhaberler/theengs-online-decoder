@@ -206,8 +206,9 @@ tab in the mobile app):
   an update.
 - **Catalogs** — websites listing decoders. Add one by its page URL or its
   `decoders.json` URL; the list and each catalog's last index are remembered
-  (Browse works offline). The example catalog
-  <https://mhaberler.github.io/sensor-ble-decoder-catalog/> is preset. A
+  (Browse works offline). The catalog
+  <https://mhaberler.github.io/sensor-ble-decoders-custom/> (`theengs`,
+  `mystery`) is preset on first run. A
   catalog page's **Add to Sensor-BLE** button or QR code opens the web app with
   `?catalog=<url>`, which asks to add it. The mobile app handles the deep link
   `sensorble://catalog?url=<url-encoded catalog URL>` the same way (a catalog
@@ -254,8 +255,19 @@ published as a gist:
 bun run build-sensorble-theengs   # regenerate after a theengs-decoder bump
 ```
 
-Install it via the raw URL of wherever you publish it. Sensor Logger doesn't
-know `matchAll`, so there the decoder installs but never matches.
+Install it via the raw URL of wherever you publish it, or from the
+[sensor-ble-decoders-custom](https://mhaberler.github.io/sensor-ble-decoders-custom/)
+catalog. To update the catalog copy after a theengs-decoder bump:
+
+```sh
+bun run publish-catalog      # regenerate, copy into ../sensor-ble-decoders-custom, run its build
+# then commit and push in ../sensor-ble-decoders-custom (publishes via GitHub Pages)
+```
+
+Its catalog `version` is the theengs-decoder version plus a generator revision
+(`2.4.5.1`); bump `GENERATOR_REVISION` in the generator when only the glue
+changes. Sensor Logger doesn't know `matchAll`, so there the decoder installs
+but never matches.
 
 ### Publishing decoders as gists
 
