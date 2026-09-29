@@ -52,7 +52,16 @@ jobs:
           cd app && bun install --frozen-lockfile
           bunx vite build && bunx cap sync android
       - name: Keystore
-        run: echo "${{ secrets.ANDROID_KEYSTORE }}" | base64 -d > "$RUNNER_TEMP/release.keystore"
+        env:
+          KS: ${{ secrets.ANDROID_KEYSTORE }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [[ -z "$KS" || -z "$KS_PASS" || -z "$KS_ALIAS" || -z "$KEY_PASS" ]]; then
+            echo "::error::ANDROID_* secrets missing — run scripts/sync-app-secrets.sh"; exit 1
+          fi
+          echo "$KS" | base64 -d > "$RUNNER_TEMP/release.keystore"
       - name: Build signed APK + AAB
         working-directory: app/android
         env:
@@ -89,9 +98,16 @@ jobs:
           cd app && bun install --frozen-lockfile
           bunx vite build && bunx cap sync ios
       - name: App Store Connect API key
+        env:
+          P8: ${{ secrets.ASC_KEY_P8 }}
+          KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ISSUER: ${{ secrets.ASC_ISSUER_ID }}
         run: |
+          if [[ -z "$P8" || -z "$KEY_ID" || -z "$ISSUER" ]]; then
+            echo "::error::ASC_* secrets missing — run scripts/sync-app-secrets.sh"; exit 1
+          fi
           mkdir -p "$RUNNER_TEMP/asc"
-          echo "${{ secrets.ASC_KEY_P8 }}" | base64 -d > "$RUNNER_TEMP/asc/AuthKey.p8"
+          echo "$P8" | base64 -d > "$RUNNER_TEMP/asc/AuthKey.p8"
       # The archive is built unsigned; signing happens at export, where
       # -allowProvisioningUpdates + the API key lets Xcode fetch the profile and
       # use the cloud-managed distribution certificate. Archiving signed would
