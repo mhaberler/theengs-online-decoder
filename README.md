@@ -296,45 +296,15 @@ the Xcode project.
 ### Signed release builds (GitHub Actions)
 
 [.github/workflows/app-release.yml](.github/workflows/app-release.yml) builds a
-signed **IPA** (App Store Connect distribution), a signed **APK** (sideload)
-and an **AAB** (Play) — no fastlane:
+signed **IPA** (TestFlight / App Store), **APK** (sideload) and **AAB** (Play)
+without fastlane: iOS via Xcode cloud-managed signing with an App Store Connect
+API key, Android via Gradle with an upload keystore. A manual run produces
+artifacts; a tag `app-v<version>` also uploads to TestFlight and creates a
+GitHub Release.
 
-- **iOS:** unsigned `xcodebuild archive`, then `-exportArchive
-  -allowProvisioningUpdates` with an App Store Connect API key. Xcode's
-  automatic signing fetches the profile and uses Apple's cloud-managed
-  distribution certificate, so no certificates or profiles are stored anywhere.
-- **Android:** plain Gradle `assembleRelease bundleRelease`; the release
-  `signingConfig` in [app/android/app/build.gradle](app/android/app/build.gradle)
-  reads the keystore from `ANDROID_KEYSTORE_*` env vars (unsigned when unset).
-- **Versions:** `versionName`/`MARKETING_VERSION` from the tag (or
-  `app/package.json`), `versionCode`/`CURRENT_PROJECT_VERSION` = run number.
-
-| Trigger | Result |
-|---|---|
-| tag `app-v0.1.0` | IPA uploaded to TestFlight; IPA + APK + AAB attached to a GitHub Release |
-| *Run workflow* (dispatch) | IPA + APK + AAB as workflow artifacts |
-
-`app-v*` keeps app releases separate from the web/library `v*` tags.
-
-One-time setup:
-
-1. Create the app record for `com.haberler.sensorble` in App Store Connect
-   (the API can't create apps; the bundle ID is registered automatically).
-2. An App Store Connect API key with the **Admin** role (Users and Access →
-   Integrations → App Store Connect API → Team Keys). Only Admin keys may use
-   cloud-managed distribution certificates; an App Manager key fails export
-   with "Cloud signing permission error".
-3. Fill in the app-signing block of `.env` (see [.env.example](.env.example))
-   and push the secrets into the repo — the script only pipes the values to
-   `gh secret set`, it never prints them:
-
-   ```sh
-   scripts/sync-app-secrets.sh --env-file .env   # or --repo owner/name, --ios-only, --android-only
-   ```
-
-   The same variables can come from the process environment instead.
-
-Release: `git tag app-v0.1.0 && git push origin app-v0.1.0`.
+**See [BUILD.md](BUILD.md)** for the complete setup — App ID, App Store Connect
+app record, API key, keystore, GitHub secrets — plus versioning, distribution
+and troubleshooting.
 
 Platform limits:
 - **iOS** hides MAC addresses (the id is a per-phone UUID), so decoders that

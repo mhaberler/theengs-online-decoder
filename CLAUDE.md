@@ -122,6 +122,8 @@ on `app-v*` tags / dispatch — iOS unsigned archive + `-exportArchive
 -allowProvisioningUpdates` with an ASC API key (cloud-managed signing,
 `app/ci/ExportOptions-*.plist`), Android Gradle `signingConfigs.release` from
 `ANDROID_KEYSTORE_*` env; versions injected from tag + run number. No fastlane.
+Full setup and troubleshooting: [BUILD.md](BUILD.md) — keep it in sync when
+changing the workflow, export options or signing config.
 
 **Dongle drivers** ([web/drivers/](web/drivers/)). Pluggable registry in
 [web/drivers/index.js](web/drivers/index.js) for USB-serial BLE-scanner dongles
