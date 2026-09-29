@@ -13,7 +13,8 @@ comes from the [`theengs-decoder`](https://www.npmjs.com/package/theengs-decoder
 npm dependency: `node_modules/theengs-decoder/dist/theengs_decoder_wasm.mjs`, an
 ES module with a `default` createModule export and base64-embedded wasm (single
 file, no sidecar `.wasm`, built for both `web` and `node`). That one artifact
-backs both the Node API and the browser web app; nothing is copied into the repo.
+backs both the Node API and the browser web app; nothing is copied into the repo
+(sole exception: the generated `sensor-ble-decoders/theengs.js`, which inlines it).
 
 > Use **bun** for installs (`bun install`) — the npm registry mirror in this
 > environment can't resolve the `theengs-decoder` dependency.
@@ -26,6 +27,7 @@ bun run test               # node --test test/*.test.js
 node --test test/decode.test.js   # single test file
 bun run decode-log <file>  # decode a sensorlogs-style JSON file from the CLI
 bun run decode-sensorlogs  # decode everything in sensorlogs/*.json
+bun run build-sensorble-theengs  # regenerate sensor-ble-decoders/theengs.js
 
 bun run web                # zero-dep static server (serve.js) on :8000
 bun run web:dev            # vite dev server on :5173
@@ -75,7 +77,21 @@ at runtime (fetch → blob URL → dynamic `import`, never `eval`), caching URL 
 source in localStorage so they re-register offline; a custom decoder overrides a
 built-in of the same `decoderName`. Verify shim changes against the decoders'
 own fixtures: each `node_modules/sensor-ble/devices/*.js` exports a `tests`
-array of given/expected pairs.
+array of given/expected pairs. Local extensions to the sensor-ble contract:
+`matchAll: true` matches every advertisement and such decoders are tried
+**last** (`activeDecoders`); `advertisementDecode` gets a third `meta` arg
+`{ name, id }`.
+
+**Theengs-as-sensor-ble decoder.** `sensor-ble-decoders/theengs.js` is
+**generated** by [scripts/build-sensorble-theengs.js](scripts/build-sensorble-theengs.js)
+(`bun run build-sensorble-theengs`) and committed (published as a gist). It
+inlines the theengs wasm `.mjs` and textually patches out its Node branches
+(`import.meta.url`, `await import('module')`, `require(...)`, shell-env assert)
+so it satisfies Sensor Logger's no-`import`/`require` sandbox; each patch asserts
+its match count, so a theengs-decoder bump that changes the Emscripten glue
+fails the build. Rerun the generator after bumping theengs-decoder.
+Top-level `await` initializes the wasm, so the decoder is ready once its
+module import resolves.
 
 **Dongle drivers** ([web/drivers/](web/drivers/)). Pluggable registry in
 [web/drivers/index.js](web/drivers/index.js) for USB-serial BLE-scanner dongles
@@ -87,7 +103,8 @@ factory in `web/drivers/`, append it to `driverFactories`, and follow the
 interface documented in the comment block at the top of index.js.
 
 **Wasm distribution.** `node_modules/theengs-decoder/dist/theengs_decoder_wasm.mjs`
-is the single source of truth — never copied or committed. Browser code imports
+is the single source of truth — never copied or committed (except inlined into
+the generated `sensor-ble-decoders/theengs.js`). Browser code imports
 the relative URL `./theengs_decoder_wasm.mjs` ([web/decoder.js](web/decoder.js));
 each server maps that URL to the node_modules artifact: vite via `resolve.alias`
 ([web/vite.config.mjs](web/vite.config.mjs)), `serve.js` via a route in

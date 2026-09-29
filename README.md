@@ -209,6 +209,25 @@ and press **Install**. A GitHub Gist works well — use the **raw** file URL; a
 > Only install decoders from sources you trust: the fetched code runs in the
 > page, like any other script on it.
 
+### Theengs as a sensor-ble decoder
+
+[sensor-ble-decoders/theengs.js](sensor-ble-decoders/theengs.js) is a custom
+decoder that wraps TheengsDecoder: any advertisement Theengs knows decodes to
+its JSON (`brand`, `model`, `model_id`, measurements…). It declares no
+`manufacturer`/`serviceUUID`; instead `matchAll: true` makes this tab offer it
+every advertisement, **after** all other decoders, so it acts as a fallback.
+Output varies per device, hence `variableFormat: true`. The file is generated —
+the theengs-decoder wasm is inlined and its Node code patched out, so it obeys
+Sensor Logger's sandbox (no `import`/`require`) — and committed so it can be
+published as a gist:
+
+```sh
+bun run build-sensorble-theengs   # regenerate after a theengs-decoder bump
+```
+
+Install it via the raw URL of wherever you publish it. Sensor Logger doesn't
+know `matchAll`, so there the decoder installs but never matches.
+
 ## Install
 
 ```sh
@@ -292,7 +311,9 @@ module so the first hot-path call doesn't pay the load cost.
 The wasm module is provided by the
 [`theengs-decoder`](https://www.npmjs.com/package/theengs-decoder) dependency
 (`dist/theengs_decoder_wasm.mjs`) — there is no local build step and no C++
-toolchain is required.
+toolchain is required. The one copy is the generated
+[sensor-ble-decoders/theengs.js](sensor-ble-decoders/theengs.js), which inlines
+it (see [Theengs as a sensor-ble decoder](#theengs-as-a-sensor-ble-decoder)).
 
 ```sh
 bun install

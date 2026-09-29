@@ -23,11 +23,13 @@ export function setCustomDecoders(list) {
 }
 
 // Custom decoders override built-ins of the same decoderName (the rule the
-// Sensor Logger app uses), so they are matched first.
+// Sensor Logger app uses), so they are matched first. `matchAll` decoders
+// (catch-alls like the theengs wrapper) go last, as a fallback.
 export function activeDecoders() {
   const custom = [...customDecoders.values()];
   const shadowed = new Set(customDecoders.keys());
-  return custom.concat(builtinDecoders.filter((d) => !shadowed.has(d.decoderName)));
+  const all = custom.concat(builtinDecoders.filter((d) => !shadowed.has(d.decoderName)));
+  return all.filter((d) => !d.matchAll).concat(all.filter((d) => d.matchAll));
 }
 
 export function isBuiltinName(name) {
@@ -65,7 +67,9 @@ function readEntry(entry) {
 // Port of isDecoderValid() from sensor-ble/harness/main.js — same priority
 // (name, then manufacturer, then serviceUUID) and same early-return semantics,
 // so a decoder matches here exactly as it does under the Node harness.
+// Extension: `matchAll: true` matches every advertisement.
 export function isDecoderValid(decoder, adv) {
+  if (decoder.matchAll) return true;
   if (decoder.name && adv.localName) {
     return adv.localName.indexOf(decoder.name) !== -1;
   }
@@ -87,9 +91,10 @@ export function decodeEntry(entry) {
   const adv = readEntry(entry);
   if (!adv.manufacturerData && !Object.keys(adv.serviceDataMap).length) return null;
 
+  const meta = { name: adv.localName, id: entry.id };
   for (const decoder of activeDecoders()) {
     if (!isDecoderValid(decoder, adv)) continue;
-    const values = decoder.advertisementDecode(adv.manufacturerData, adv.serviceDataMap);
+    const values = decoder.advertisementDecode(adv.manufacturerData, adv.serviceDataMap, meta);
     // Decoders re-validate their own payloads and return null on a mismatch;
     // keep trying so one company ID shared by several devices still resolves.
     if (!values || !Object.keys(values).length) continue;
