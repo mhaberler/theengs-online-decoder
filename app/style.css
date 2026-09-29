@@ -14,6 +14,9 @@ body {
 .tab-btn { background: #eee; border: 1px solid #ccc; border-radius: 6px; padding: .4rem .8rem; min-height: 38px; font-size: 14px; }
 .tab-btn.active { background: #1976d2; border-color: #1976d2; color: #fff; font-weight: 600; }
 h1 { font-size: 1.15rem; margin: 0; }
+/* iOS zooms the page in when a focused text field's font is under 16px, and
+   stays zoomed — keep every input at 16px or more. */
+input, textarea, select { font-size: 16px; }
 button { padding: .6rem 1rem; font-size: 15px; min-height: 44px; }
 button:disabled { opacity: .5; }
 .row { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
@@ -31,7 +34,7 @@ code { font-size: 12px; }
 /* Decoders (collapsible to leave room for the log) */
 details.decoders { border: 1px solid #ccc; border-radius: 6px; padding: .4rem .6rem; }
 details.decoders > summary { cursor: pointer; font-weight: 600; font-size: 14px; color: #333; }
-#sbl-custom-url { flex: 1; min-width: 0; font-family: ui-monospace, monospace; font-size: 13px; padding: .55rem; }
+#sbl-custom-url { flex: 1; min-width: 0; font-family: ui-monospace, monospace; font-size: 16px; padding: .55rem; }
 .decoder-builtins { font-size: 12px; color: #555; margin: .4rem 0; }
 .decoder-builtins span { font-family: ui-monospace, monospace; color: #333; }
 .decoder-help { font-size: 12px; color: #555; margin: .25rem 0 .5rem; }
@@ -49,10 +52,10 @@ details.decoders > summary { cursor: pointer; font-weight: 600; font-size: 14px;
 /* JSONata expression panes */
 .expr-pane { margin: .4rem 0; }
 .expr-pane label { display: block; font-weight: 600; font-size: 13px; margin-bottom: .2rem; }
-.expr-pane textarea { width: 100%; min-height: 7em; font-family: ui-monospace, monospace; font-size: 12px; }
+.expr-pane textarea { width: 100%; min-height: 7em; font-family: ui-monospace, monospace; font-size: 16px; }
 
 /* Log */
-.log-search { flex: 1; min-width: 0; font-family: ui-monospace, monospace; font-size: 13px; padding: .5rem; }
+.log-search { flex: 1; min-width: 0; font-family: ui-monospace, monospace; font-size: 16px; padding: .5rem; }
 .log-searchcount { font-family: ui-monospace, monospace; font-size: 12px; color: #555; }
 .live-log { flex: 1; min-height: 0; overflow: auto; -webkit-overflow-scrolling: touch; background: #fafafa; border: 1px solid #ddd; border-radius: 4px; padding: .4rem; font-family: ui-monospace, monospace; font-size: 11px; }
 .log-row { padding: .3rem .45rem; margin: .25rem 0; border-left: 3px solid #bbb; background: #fff; border-radius: 2px; }
