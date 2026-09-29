@@ -56,3 +56,16 @@ test('shortens only Bluetooth Base UUIDs to the dongle form', async () => {
   const custom = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
   assert.strictEqual(shortUuid(custom), custom);
 });
+
+test('carries the advertised service-UUID list, shortened like service data', async () => {
+  const toEntry = await load();
+  const e = toEntry({ device: { deviceId: 'x' }, uuids: ['0000180d-0000-1000-8000-00805f9b34fb', 'f0000000-0451-4000-b000-000000000000'] });
+  assert.deepStrictEqual(e.serviceUuids, ['0x180d', 'f0000000-0451-4000-b000-000000000000']);
+});
+
+test('uuid128 expands short UUIDs and leaves full ones alone', async () => {
+  const { uuid128 } = await import(pathToFileURL(path.join(__dirname, '..', 'app', 'scan-entry.js')).href);
+  assert.strictEqual(uuid128('180D'), '0000180d-0000-1000-8000-00805f9b34fb');
+  assert.strictEqual(uuid128('0x2a37'), '00002a37-0000-1000-8000-00805f9b34fb');
+  assert.strictEqual(uuid128('0000ffe5-0000-1000-8000-00805f9a34fb'), '0000ffe5-0000-1000-8000-00805f9a34fb');
+});

@@ -70,10 +70,12 @@ async function importDecoder(source) {
     if (!decoder.decoderName || typeof decoder.decoderName !== 'string') {
       throw new Error('decoder.decoderName missing or not a string');
     }
-    if (typeof decoder.advertisementDecode !== 'function') {
+    // Sensor Logger's rule: an advertisementDecode function, or both start()
+    // and a notify array (streaming decoders, used by the app's Connected tab).
+    const streaming = typeof decoder.start === 'function' && Array.isArray(decoder.notify);
+    if (typeof decoder.advertisementDecode !== 'function' && !streaming) {
       throw new Error(
-        `decoder "${decoder.decoderName}" has no advertisementDecode() — ` +
-        'streaming (GATT) decoders are not supported in this tab',
+        `decoder "${decoder.decoderName}" needs advertisementDecode(), or start() and a notify array`,
       );
     }
     return decoder;

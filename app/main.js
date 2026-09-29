@@ -9,6 +9,7 @@ import { setStorage as setExprStorage, init as initExprs } from '../web/jsonata-
 import { initSerialSensorble } from '../web/serial-sensorble.js';
 import { initSerialJsonata } from '../web/serial-jsonata.js';
 import { initDecodersTab } from '../web/decoders-tab.js';
+import { initConnectedTab } from './connected-tab.js';
 
 // Storage must be set before the tabs restore cached decoders, catalogs and
 // expressions (decoder-catalog.js shares sensorble-custom's store).
@@ -21,6 +22,7 @@ await initExprs();
 const panel = (name) => document.querySelector(`[data-panel="${name}"]`);
 initSerialSensorble(panel('serial-sensorble'), { conn: bleConn, readyMessage: 'Tap Start scan.' });
 initSerialJsonata(panel('serial-jsonata'), { conn: bleConn, readyMessage: 'Tap Start scan.' });
+initConnectedTab(panel('connected'), bleConn);
 const decodersTab = initDecodersTab(panel('decoders'));
 
 const tabBtns = document.querySelectorAll('.tab-btn');

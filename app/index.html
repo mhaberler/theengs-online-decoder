@@ -13,6 +13,7 @@
     <nav class="tabs" role="tablist">
       <button class="tab-btn active" data-tab="serial-sensorble" role="tab">sensor-ble</button>
       <button class="tab-btn" data-tab="serial-jsonata" role="tab">JSONata</button>
+      <button class="tab-btn" data-tab="connected" role="tab">Connected</button>
       <button class="tab-btn" data-tab="decoders" role="tab">Decoders</button>
     </nav>
   </header>
@@ -65,6 +66,26 @@
     </div>
     <div id="jso-log" class="live-log" aria-live="polite"></div>
   </main>
+  <!-- Connected sensors (app only; connected-tab.js, gatt.js) -->
+  <main class="tab-panel scroll" data-panel="connected">
+    <div class="row">
+      <button id="con-scan"><span class="scan-indicator" data-state="idle"></span><span>Start scan</span></button>
+    </div>
+    <div id="con-status" class="status">Start a scan to find connectable sensors.</div>
+
+    <section>
+      <h2>Connected</h2>
+      <div id="con-sessions" class="decoder-list"></div>
+    </section>
+
+    <section>
+      <h2>Nearby connectable sensors</h2>
+      <p class="decoder-help">Devices from the scan that match a connected-sensor decoder
+        (built-in or installed from a catalog).</p>
+      <div id="con-candidates" class="decoder-list"></div>
+    </section>
+  </main>
+
   <!-- Mirrors the Decoders panel of web/index.html (ids dec-*). -->
   <main class="tab-panel scroll" data-panel="decoders">
     <div id="dec-status" class="status"></div>

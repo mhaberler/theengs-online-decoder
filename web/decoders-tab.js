@@ -5,7 +5,7 @@
 // first), the catalog list, and install-from-URL. The sensor-ble tab itself
 // only scans and logs.
 
-import { builtinDecoders, isBuiltinName, isBuiltinEnabled, seenSignals } from './sensorble-decode.js';
+import { builtinDecoders, builtinStreamingDecoders, isBuiltinName, isBuiltinEnabled, seenSignals } from './sensorble-decode.js';
 import * as custom from './sensorble-custom.js';
 import * as catalogs from './decoder-catalog.js';
 import { compareVersions, matchesSeen } from './catalog-util.js';
@@ -54,15 +54,17 @@ export function initDecodersTab(root) {
 
   // --- Installed + built-ins -------------------------------------------------
 
+  // Advertising built-ins, then the streaming ones (connected sensors, used by
+  // the app's Connected tab), marked as such.
   function renderBuiltins() {
     els.builtins.replaceChildren();
-    for (const d of builtinDecoders) {
+    for (const d of [...builtinDecoders, ...builtinStreamingDecoders]) {
       const label = el('label');
       const box = document.createElement('input');
       box.type = 'checkbox';
       box.checked = isBuiltinEnabled(d.decoderName);
       box.addEventListener('change', () => custom.setBuiltinEnabled(d.decoderName, box.checked));
-      label.append(box, ' ' + d.decoderName);
+      label.append(box, ' ' + d.decoderName + (builtinStreamingDecoders.includes(d) ? ' (connected)' : ''));
       els.builtins.appendChild(label);
     }
   }
@@ -126,6 +128,7 @@ export function initDecodersTab(root) {
       const head = el('div', 'decoder-name', e.title || e.decoderName);
       head.appendChild(el('span', 'decoder-ver', ' v' + e.version));
       if (suggested.has(e)) head.appendChild(el('span', 'decoder-badge decoder-suggested', 'matches a device seen'));
+      if (e.streaming) head.appendChild(el('span', 'decoder-badge', 'connected sensor'));
       row.appendChild(head);
       if (e.description) row.appendChild(el('div', 'decoder-desc', e.description));
       row.appendChild(el('div', 'decoder-meta',

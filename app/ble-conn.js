@@ -49,6 +49,16 @@ export function setLocationOffHandler(fn) {
   onLocationOff = fn;
 }
 
+// BleClient.initialize() once (permissions on Android); shared with gatt.js.
+// Location permission is requested too (no androidNeverForLocation):
+// asserting neverForLocation makes Android filter some beacon adverts.
+export async function ensureInitialized() {
+  if (!initialized) {
+    await BleClient.initialize();
+    initialized = true;
+  }
+}
+
 export async function toggleScan() {
   await setScanning(!scanning);
 }
@@ -63,12 +73,7 @@ export async function setScanning(on) {
     return;
   }
   try {
-    if (!initialized) {
-      // Location permission is requested too (no androidNeverForLocation):
-      // asserting neverForLocation makes Android filter some beacon adverts.
-      await BleClient.initialize();
-      initialized = true;
-    }
+    await ensureInitialized();
     if (Capacitor.getPlatform() === 'android' && !(await BleClient.isLocationEnabled())) {
       status('Location is off — Android returns no scan results without it.');
       onLocationOff?.();

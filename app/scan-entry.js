@@ -20,6 +20,17 @@ export function shortUuid(uuid) {
   return m ? '0x' + m[1].toLowerCase() : uuid;
 }
 
+// sensor-ble decoders use 16-bit ('180d'), 32-bit or full 128-bit UUIDs; the
+// plugin wants 128-bit. Full UUIDs pass through unchanged (WitMotion's
+// '…-00805f9a34fb' is deliberately not the Bluetooth Base UUID).
+export function uuid128(u) {
+  let s = String(u).toLowerCase();
+  if (s.startsWith('0x')) s = s.slice(2);
+  if (/^[0-9a-f]{4}$/.test(s)) return `0000${s}-0000-1000-8000-00805f9b34fb`;
+  if (/^[0-9a-f]{8}$/.test(s)) return `${s}-0000-1000-8000-00805f9b34fb`;
+  return s;
+}
+
 export function scanResultToEntry(result) {
   const id = result.device?.deviceId || '?';
   // deviceId is the MAC on Android and a per-phone UUID on iOS; either way it
@@ -38,6 +49,10 @@ export function scanResultToEntry(result) {
     e.manufacturerdata = lo + hi + bytesToHex(dv);
     break;
   }
+
+  // Advertised service UUIDs: how connectable sensors (heart-rate straps,
+  // TESS, …) announce themselves; used to offer streaming decoders.
+  if (result.uuids?.length) e.serviceUuids = result.uuids.map(shortUuid);
 
   // Service data: keep every element (readEntry accepts the map); the first
   // one is also exposed in the flat fields so the raw view reads as usual.

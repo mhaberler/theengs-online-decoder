@@ -45,6 +45,13 @@ details.decoders > summary { cursor: pointer; font-weight: 600; font-size: 14px;
 .decoder-meta { font-size: 11px; color: #666; font-family: ui-monospace, monospace; margin: .1rem 0 .3rem; word-break: break-all; }
 .decoder-badge.decoder-update { color: #0d47a1; background: #e3f2fd; }
 .decoder-badge.decoder-suggested { color: #1b5e20; background: #e8f5e9; }
+
+/* Connected tab */
+.con-values { border-collapse: collapse; margin: .3rem 0; font-family: ui-monospace, monospace; font-size: 13px; }
+.con-values th { text-align: left; font-weight: 400; color: #666; padding: .1rem .8rem .1rem 0; }
+.con-values td { text-align: right; font-weight: 600; }
+.con-state.con-streaming { color: #1b5e20; background: #e8f5e9; }
+.con-state.con-failed, .con-state.con-disconnected { color: #b71c1c; background: #ffebee; }
 .decoder-builtins { font-size: 12px; color: #555; margin: .4rem 0; }
 .decoder-builtins span { font-family: ui-monospace, monospace; color: #333; }
 #dec-builtins { display: flex; flex-wrap: wrap; gap: .25rem .9rem; margin-top: .3rem; }
