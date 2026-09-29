@@ -301,20 +301,28 @@ The workflow must exist on the default branch for manual runs.
 
 ### Release
 
+The web app and Sensor-BLE share one version: the root `package.json`
+`version`, mirrored into `app/package.json`.
+[scripts/version.js](scripts/version.js) bumps it and creates the tags:
+
 ```sh
-# optional: bump app/package.json "version" to match
-git tag app-v0.1.0
-git push origin app-v0.1.0
+bun run version:patch        # or version:minor / version:major — writes both
+                             # package.json files and commits "chore: version X.Y.Z"
+git push                     # tags must point at a pushed commit
+bun run release:app          # tag + push app-vX.Y.Z → signed builds, TestFlight, GitHub Release
+bun run release:web          # tag + push vX.Y.Z     → GitHub Pages deploy (optional)
 ```
 
-This builds everything, uploads the IPA to TestFlight, and creates the GitHub
-Release `app-v0.1.0` with `sensor-ble-0.1.0.ipa`, `.apk` and `.aab`.
+`release:*` refuses a dirty tree, an already existing tag (bump first) and an
+unpushed HEAD. The app release builds everything, uploads the IPA to
+TestFlight, and creates the GitHub Release `app-vX.Y.Z` with
+`sensor-ble-X.Y.Z.ipa`, `.apk` and `.aab`.
 
 ### What the jobs do
 
 | Job | Runner | Steps |
 |---|---|---|
-| `version` | ubuntu | version name from the tag (`app-v0.1.0` → `0.1.0`) or `app/package.json`; build number = `github.run_number` |
+| `version` | ubuntu | version name from the tag (`app-v0.3.1` → `0.3.1`) or `app/package.json`; build number = `github.run_number` |
 | `android` | ubuntu, JDK 21 | bun installs → `vite build` → `cap sync android` → decode keystore → `gradlew assembleRelease bundleRelease -PversionCode -PversionName` |
 | `ios` | macos-15, newest Xcode | bun installs → `vite build` → `cap sync ios` → decode + validate API key → unsigned `xcodebuild archive` → `-exportArchive` (IPA) → on tags a second `-exportArchive` with `destination = upload` |
 | `release` | ubuntu (tags only) | download artifacts → `gh release create` |
@@ -325,7 +333,7 @@ Nothing is committed back; versions are injected at build time.
 
 | | iOS | Android | Source |
 |---|---|---|---|
-| user-visible version | `MARKETING_VERSION` (CFBundleShortVersionString) | `versionName` | tag `app-vX.Y.Z` → `X.Y.Z`; manual runs: `app/package.json` `version` |
+| user-visible version | `MARKETING_VERSION` (CFBundleShortVersionString) | `versionName` | tag `app-vX.Y.Z` → `X.Y.Z`; manual runs: `app/package.json` `version` (same as the root `package.json`, see [Release](#release)) |
 | build number | `CURRENT_PROJECT_VERSION` (CFBundleVersion) | `versionCode` | `github.run_number` (monotonic per workflow) |
 
 App Store Connect rejects a re-used build number for the same version, and

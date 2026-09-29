@@ -40,6 +40,11 @@ bun run web                # zero-dep static server (serve.js) on :8000
 bun run web:dev            # vite dev server on :5173
 bun run web:build          # production build -> web/dist/
 bun run deploy-web         # vite build + rsync to host (configured via .env, see README.md)
+
+bun run version:patch      # / version:minor / version:major: bump the shared version
+                           # (package.json + app/package.json), commit
+bun run release:web        # tag + push v<version>     (GitHub Pages deploy)
+bun run release:app        # tag + push app-v<version> (signed app builds, TestFlight)
 ```
 
 ## Architecture

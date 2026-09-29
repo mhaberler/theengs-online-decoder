@@ -346,7 +346,12 @@ bun run web:preview   # serves the built output at http://localhost:4173/
 `web/dist/` is fully self-contained. Drop the directory on any static host
 (GitHub Pages, Netlify, Cloudflare Pages, S3, etc.) — no server-side code or
 runtime dependencies needed. Pushing a `v*` tag deploys to GitHub Pages via
-the workflow in `.github/workflows/`.
+the workflow in `.github/workflows/`:
+
+```sh
+bun run version:patch && git push   # or version:minor / version:major
+bun run release:web                 # tag + push vX.Y.Z from package.json
+```
 
 ## Deploy to a static host via rsync
 

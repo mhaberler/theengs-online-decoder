@@ -1,6 +1,6 @@
 {
   "name": "theengs-online-decoder",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "Decode BLE advertisements from supported sensors and devices using TheengsDecoder, in Node.js via WebAssembly.",
   "keywords": [
     "theengs",
@@ -35,7 +35,12 @@
     "deploy-web": "bash scripts/deploy-web.sh",
     "build-sensorble-theengs": "node scripts/build-sensorble-theengs.js",
     "publish-gist": "node scripts/publish-gist.js",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "version:major": "node scripts/version.js bump major",
+    "version:minor": "node scripts/version.js bump minor",
+    "version:patch": "node scripts/version.js bump patch",
+    "release:web": "node scripts/version.js tag web",
+    "release:app": "node scripts/version.js tag app"
   },
   "engines": {
     "node": ">=18"
