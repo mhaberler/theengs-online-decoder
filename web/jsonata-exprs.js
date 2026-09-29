@@ -1,9 +1,13 @@
 'use strict';
 
-// Shared JSONata trigger/decoder expression pair: one localStorage-backed pair
-// used by both the Serial/JSONata tab and the File tab's JSONata mode. Every
-// tab binds its own textarea panes via bindExprPanes(); saving in one tab
-// updates all bound panes and the compiled expressions used for decoding.
+// Shared JSONata trigger/decoder expression pair: one persisted pair used by
+// both the Serial/JSONata tab and the File tab's JSONata mode. Every tab binds
+// its own textarea panes via bindExprPanes(); saving in one tab updates all
+// bound panes and the compiled expressions used for decoding.
+//
+// Storage is localStorage by default; the Capacitor app swaps in
+// @capacitor/preferences via setStorage(). Call (and await) init() before
+// bindExprPanes() or evaluateAdv().
 
 import jsonata from './jsonata-shim.js';
 
@@ -54,10 +58,19 @@ const DEFAULT_DECODER = `(
   }
 )`;
 
-let sources = {
-  trigger: localStorage.getItem(KEY_TRIGGER) ?? DEFAULT_TRIGGER,
-  decoder: localStorage.getItem(KEY_DECODER) ?? DEFAULT_DECODER,
+let storage = {
+  get: async (key) => localStorage.getItem(key),
+  set: async (key, value) => localStorage.setItem(key, value),
 };
+
+export function setStorage(s) {
+  storage = s;
+}
+
+let sources = { trigger: DEFAULT_TRIGGER, decoder: DEFAULT_DECODER };
+let compiled = { trigger: null, decoder: null };
+let lastErrors = { trigger: null, decoder: null };
+const panes = new Set();
 
 function compileOne(src) {
   try {
@@ -68,13 +81,20 @@ function compileOne(src) {
   }
 }
 
-// Compile whatever was stored; a corrupt saved expression surfaces its error
-// in every bound pane so the failure is visible without pressing Save.
-const initial = { trigger: compileOne(sources.trigger), decoder: compileOne(sources.decoder) };
-let compiled = { trigger: initial.trigger.expr, decoder: initial.decoder.expr };
-let lastErrors = { trigger: initial.trigger.error, decoder: initial.decoder.error };
+// Load and compile whatever was stored; a corrupt saved expression surfaces
+// its error in every bound pane so the failure is visible without pressing Save.
+export async function init() {
+  sources = {
+    trigger: (await storage.get(KEY_TRIGGER)) ?? DEFAULT_TRIGGER,
+    decoder: (await storage.get(KEY_DECODER)) ?? DEFAULT_DECODER,
+  };
+  const t = compileOne(sources.trigger);
+  const d = compileOne(sources.decoder);
+  compiled = { trigger: t.expr, decoder: d.expr };
+  lastErrors = { trigger: t.error, decoder: d.error };
+  for (const p of panes) refreshPane(p);
+}
 
-const panes = new Set();
 
 function showErrors(p, errs) {
   if (p.triggerError) p.triggerError.textContent = errs.trigger ?? '';
@@ -99,8 +119,8 @@ export function bindExprPanes(els) {
     sources = { trigger: els.trigger.value, decoder: els.decoder.value };
     compiled = { trigger: trig.expr, decoder: dec.expr };
     lastErrors = { trigger: null, decoder: null };
-    localStorage.setItem(KEY_TRIGGER, sources.trigger);
-    localStorage.setItem(KEY_DECODER, sources.decoder);
+    Promise.all([storage.set(KEY_TRIGGER, sources.trigger), storage.set(KEY_DECODER, sources.decoder)])
+      .catch((e) => console.error('jsonata-exprs: save failed', e));
     for (const p of panes) if (p !== els) refreshPane(p);
   });
 }

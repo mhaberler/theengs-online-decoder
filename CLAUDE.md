@@ -63,7 +63,8 @@ singleton (port, autodetect, read loop, scan state) shared by both serial tabs;
 [web/serial-core.js](web/serial-core.js) is the per-tab view (log rendering,
 counters) and tabs differ only in the `decode` callback;
 the JSONata expression pair lives in [web/jsonata-exprs.js](web/jsonata-exprs.js)
-(one localStorage-backed pair shared by the File and Serial/JSONata tabs).
+(one persisted pair shared by the File and Serial/JSONata tabs; storage is
+pluggable and loaded by an async `init()`).
 [web/decoder.js](web/decoder.js) is the browser-side wasm wrapper (parallels
 index.js).
 
@@ -98,19 +99,23 @@ Top-level `await` initializes the wasm, so the decoder is ready once its
 module import resolves.
 
 **Mobile app** ([app/](app/)). Capacitor 8 app "Sensor-BLE"
-(`com.haberler.sensorble`), native only: the Serial/sensor-ble tab over the
-phone's BLE radio. [web/serial-core.js](web/serial-core.js) takes the
+(`com.haberler.sensorble`), native only: the Serial/sensor-ble and
+Serial/JSONata tabs over the phone's BLE radio (one scan, both tabs subscribed). [web/serial-core.js](web/serial-core.js) takes the
 connection as a `conn` option (default `serial-conn.js`);
 [app/ble-conn.js](app/ble-conn.js) implements that interface over
 `@capacitor-community/bluetooth-le` (always "connected", only scanning
 toggles), and [app/scan-entry.js](app/scan-entry.js) converts a `ScanResult`
 into the advert entry shape (company ID re-prefixed LE; all service data as
-`serviceDataMap`, which `readEntry` accepts). `initSerialSensorble` takes
-`{ conn, readyMessage }`; `sensorble-custom.js` takes a storage adapter via
-`setStorage` (app: `@capacitor/preferences`). The app imports `../web/*.js`
-directly; its vite config maps `./sensor-ble` to the root `node_modules`.
-Markup/CSS in `app/index.html`/`style.css` are a copy of the web panel — keep
-ids (`sbl-*`) in sync. iOS uses Swift Package Manager (no CocoaPods).
+`serviceDataMap`, which `readEntry` accepts; `servicedatauuid` shortened to the
+dongle's `0xxxxx` form for Base UUIDs). `initSerialSensorble` and
+`initSerialJsonata` take `{ conn, readyMessage }`; `sensorble-custom.js` and
+`jsonata-exprs.js` take a storage adapter via `setStorage` (app:
+`@capacitor/preferences`) — `jsonata-exprs.js` must be `await init()`ed before
+binding panes (web/app.js does it with localStorage). The app imports `../web/*.js`
+directly; its vite config maps `./sensor-ble` and `./jsonata.min.js` to the
+root `node_modules`.
+Markup/CSS in `app/index.html`/`style.css` are a copy of the web panels — keep
+ids (`sbl-*`, `jso-*`) in sync. iOS uses Swift Package Manager (no CocoaPods).
 
 **Dongle drivers** ([web/drivers/](web/drivers/)). Pluggable registry in
 [web/drivers/index.js](web/drivers/index.js) for USB-serial BLE-scanner dongles

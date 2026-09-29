@@ -10,6 +10,16 @@ function bytesToHex(dv) {
   return s;
 }
 
+// Bluetooth Base UUID 0000xxxx-0000-1000-8000-00805f9b34fb → '0xxxxx', the form
+// the dongle drivers (web/drivers/ad.js) emit, so JSONata expressions written
+// against dongle traffic match phone scans too. Other UUIDs pass through.
+const BASE_UUID = /^0000([0-9a-f]{4})-0000-1000-8000-00805f9b34fb$/i;
+
+export function shortUuid(uuid) {
+  const m = BASE_UUID.exec(uuid);
+  return m ? '0x' + m[1].toLowerCase() : uuid;
+}
+
 export function scanResultToEntry(result) {
   const id = result.device?.deviceId || '?';
   // deviceId is the MAC on Android and a per-phone UUID on iOS; either way it
@@ -36,7 +46,7 @@ export function scanResultToEntry(result) {
     e.serviceDataMap = Object.fromEntries(sd.map(([uuid, dv]) => [uuid, bytesToHex(dv)]));
     const [uuid, hex] = Object.entries(e.serviceDataMap)[0];
     e.servicedata = hex;
-    e.servicedatauuid = uuid;
+    e.servicedatauuid = shortUuid(uuid);
   }
   return e;
 }

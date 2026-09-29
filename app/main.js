@@ -3,14 +3,31 @@
 import { BleClient } from '@capacitor-community/bluetooth-le';
 import * as bleConn from './ble-conn.js';
 import { preferencesStorage } from './storage.js';
-import { setStorage } from '../web/sensorble-custom.js';
+import { setStorage as setDecoderStorage } from '../web/sensorble-custom.js';
+import { setStorage as setExprStorage, init as initExprs } from '../web/jsonata-exprs.js';
 import { initSerialSensorble } from '../web/serial-sensorble.js';
+import { initSerialJsonata } from '../web/serial-jsonata.js';
 
-// Must precede initSerialSensorble, which restores cached decoders.
-setStorage(preferencesStorage);
+// Storage must be set before the tabs restore cached decoders / expressions.
+setDecoderStorage(preferencesStorage);
+setExprStorage(preferencesStorage);
+await initExprs();
 
-const root = document.querySelector('[data-panel="serial-sensorble"]');
-initSerialSensorble(root, { conn: bleConn, readyMessage: 'Tap Start scan.' });
+// Both tabs subscribe to the one phone scan, like the web app's serial tabs
+// share one dongle.
+const panel = (name) => document.querySelector(`[data-panel="${name}"]`);
+initSerialSensorble(panel('serial-sensorble'), { conn: bleConn, readyMessage: 'Tap Start scan.' });
+initSerialJsonata(panel('serial-jsonata'), { conn: bleConn, readyMessage: 'Tap Start scan.' });
+
+const tabBtns = document.querySelectorAll('.tab-btn');
+for (const btn of tabBtns) {
+  btn.addEventListener('click', () => {
+    for (const b of tabBtns) b.classList.toggle('active', b === btn);
+    for (const p of document.querySelectorAll('.tab-panel')) {
+      p.classList.toggle('active', p.dataset.panel === btn.dataset.tab);
+    }
+  });
+}
 
 const locBtn = document.querySelector('#sbl-location');
 bleConn.setLocationOffHandler(() => { locBtn.hidden = false; });

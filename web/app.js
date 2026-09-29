@@ -5,7 +5,7 @@ import { initSerial } from './serial.js';
 import { initSerialJsonata } from './serial-jsonata.js';
 import { initSerialSensorble } from './serial-sensorble.js';
 import { initRadio } from './radio.js';
-import { bindExprPanes, evaluateAdv } from './jsonata-exprs.js';
+import { init as initExprs, bindExprPanes, evaluateAdv } from './jsonata-exprs.js';
 import { readZipEntries } from './zip.js';
 import { parseCsv } from './csv.js';
 
@@ -33,6 +33,7 @@ const exprsEl = document.getElementById('file-exprs');
 let decoder = null;
 let lastBlobUrl = null;
 
+await initExprs();
 bindExprPanes({
   trigger:      document.getElementById('file-trigger'),
   decoder:      document.getElementById('file-decoder'),

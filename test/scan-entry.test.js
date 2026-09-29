@@ -35,7 +35,7 @@ test('keeps every service-data element in serviceDataMap', async () => {
     '0000fe95-0000-1000-8000-00805f9b34fb': '7120',
   });
   assert.strictEqual(e.servicedata, '40010a');
-  assert.strictEqual(e.servicedatauuid, '0000fcd2-0000-1000-8000-00805f9b34fb');
+  assert.strictEqual(e.servicedatauuid, '0xfcd2');
 });
 
 test('prefers localName over device.name', async () => {
@@ -48,4 +48,11 @@ test('an advert without payloads yields a bare entry', async () => {
   const toEntry = await load();
   const e = toEntry({ device: { deviceId: 'x' }, rssi: -90 });
   assert.deepStrictEqual(e, { id: 'x', mac: 'x', rssi: -90 });
+});
+
+test('shortens only Bluetooth Base UUIDs to the dongle form', async () => {
+  const { shortUuid } = await import(pathToFileURL(path.join(__dirname, '..', 'app', 'scan-entry.js')).href);
+  assert.strictEqual(shortUuid('0000FE95-0000-1000-8000-00805F9B34FB'), '0xfe95');
+  const custom = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+  assert.strictEqual(shortUuid(custom), custom);
 });

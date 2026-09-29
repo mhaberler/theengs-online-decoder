@@ -267,13 +267,16 @@ gh gist delete <id>                        # unpublish — also drop its entry f
 
 ## Mobile app (Sensor-BLE)
 
-[app/](app/) is a Capacitor app for iOS and Android: the Serial/sensor-ble tab
-running on the **phone's own BLE radio** instead of a dongle. It reuses the
-web modules directly (log view, sensor-ble decoding, custom decoder install),
-so built-in decoders and decoders installed from a URL — including the
-[Theengs decoder](#theengs-as-a-sensor-ble-decoder) gist — work as in the
-browser. Installed decoders are stored with `@capacitor/preferences` and keep
-working offline.
+[app/](app/) is a Capacitor app for iOS and Android: the Serial/sensor-ble and
+Serial/JSONata tabs running on the **phone's own BLE radio** instead of a
+dongle, both fed by one scan. It reuses the web modules directly (log view,
+sensor-ble decoding, custom decoder install, JSONata expressions), so built-in
+decoders, decoders installed from a URL — including the
+[Theengs decoder](#theengs-as-a-sensor-ble-decoder) gist — and JSONata
+expression pairs work as in the browser. Installed decoders and saved
+expressions are stored with `@capacitor/preferences` and keep working offline.
+Phone scans report 16-bit service UUIDs in the dongle form (`"0xfcd2"`), so
+JSONata expressions written against dongle traffic match unchanged.
 
 ```sh
 bun install                 # repo root (sensor-ble lives here)
