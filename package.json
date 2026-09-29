@@ -1,6 +1,6 @@
 {
   "name": "theengs-online-decoder",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Decode BLE advertisements from supported sensors and devices using TheengsDecoder, in Node.js via WebAssembly.",
   "keywords": [
     "theengs",
