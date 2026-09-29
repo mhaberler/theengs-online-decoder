@@ -12,3 +12,6 @@ sensorlogs/2026-08-09_16-35-15/
 
 .gists.json
 session.md
+
+# Gradle wrapper jar is needed by CI (a global *.jar ignore would drop it)
+!app/android/gradle/wrapper/gradle-wrapper.jar
