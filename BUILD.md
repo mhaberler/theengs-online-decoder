@@ -18,6 +18,7 @@ plain Gradle with an upload keystore.
 - [Building releases in CI](#building-releases-in-ci)
 - [Versioning](#versioning)
 - [Installing and distributing the builds](#installing-and-distributing-the-builds)
+  - [Distributing Android test builds](#distributing-android-test-builds)
 - [Rotating and revoking credentials](#rotating-and-revoking-credentials)
 - [Troubleshooting](#troubleshooting)
 - [Reference: files and secrets](#reference-files-and-secrets)
@@ -344,6 +345,59 @@ Play rejects a non-increasing `versionCode` — `run_number` satisfies both.
   debug build (from `cap run`) has a different signature — uninstall it first.
 - **Android AAB:** for Google Play only (see above); it can't be installed
   directly.
+
+### Distributing Android test builds
+
+Ways to get a test build to a list of people or by link. None of them is
+wired into the workflow yet. Options 1 and 2 would add one upload step after
+the `android` job, with a service-account secret pushed by
+`sync-app-secrets.sh`.
+
+**1. Google Play internal testing.** Best if Play is planned anyway.
+- Up to 100 testers, added by email address or as a Google Group.
+- You share an opt-in link; testers accept once, then install and update from
+  the Play Store like any other app.
+- No review: builds are available within minutes.
+- Needs a Play Console developer account (one-time $25), the app created
+  there, and a service account key so CI can upload the **AAB** (e.g. the
+  `r0adkll/upload-google-play` action with `track: internal`).
+- New personal developer accounts must later run a *closed* test with 12+
+  testers for 14 days before a production release; internal testing doesn't
+  count towards that.
+
+**2. Firebase App Distribution.** Best for staying off Play for now.
+- Tester lists and groups by email, plus an invite link people can sign up
+  through.
+- Testers get an email per build and install through the Firebase App Tester
+  app or the browser. It takes the **APK** directly.
+- Needs a free Firebase project with an Android app registered for
+  `com.haberler.sensorble`, and a service account; CI uploads with e.g.
+  `wzieba/Firebase-Distribution-Github-Action` (`groups: testers`).
+- Release notes per build, and you can see who installed what.
+
+**3. GitHub Release APK plus Obtainium.** Works today, link only.
+- Every `app-v*` tag attaches `sensor-ble-X.Y.Z.apk` to a GitHub Release;
+  share the release link. Testers allow "install unknown apps" once.
+- For updates, testers add the repo URL to
+  [Obtainium](https://github.com/ImranR98/Obtainium), which watches GitHub
+  Releases and offers new APKs automatically.
+- Downside: the repo is public, so anyone with the URL can download it, and
+  there's no tester list.
+
+**4. Play internal app sharing.** One link per build.
+- Upload an APK or AAB in Play Console and get a link; anyone with it can
+  install, without version-code rules.
+- Each tester must first turn on "Internal app sharing" in the Play Store's
+  developer settings, which is clunky for non-technical users.
+
+**Signing catch — pick one channel per tester.** A build installed from Play
+(options 1 and 4) is signed with **Google's app signing key**; the workflow's
+APK (options 2 and 3) is signed with **your upload key**. Android refuses to
+update one with the other, so switching channels means uninstalling first —
+which also deletes the app's installed decoders and saved expressions.
+
+Suggested: option 1 for a test group if Play is planned, option 2 otherwise;
+option 3 works meanwhile.
 
 ## Rotating and revoking credentials
 
