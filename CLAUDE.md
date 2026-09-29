@@ -32,6 +32,7 @@ bun run publish-gist <name>...   # publish sensor-ble-decoders/<name> as secret 
 
 cd app && bun run sync          # mobile app: vite build + cap sync (bun install in root and app/ first)
 cd app && bun run run-android   # / run-ios — install on the configured device
+scripts/sync-app-secrets.sh     # push app-signing secrets (from env) to repo Actions secrets
 
 bun run web                # zero-dep static server (serve.js) on :8000
 bun run web:dev            # vite dev server on :5173
@@ -116,6 +117,11 @@ directly; its vite config maps `./sensor-ble` and `./jsonata.min.js` to the
 root `node_modules`.
 Markup/CSS in `app/index.html`/`style.css` are a copy of the web panels — keep
 ids (`sbl-*`, `jso-*`) in sync. iOS uses Swift Package Manager (no CocoaPods).
+Signed builds: [.github/workflows/app-release.yml](.github/workflows/app-release.yml)
+on `app-v*` tags / dispatch — iOS unsigned archive + `-exportArchive
+-allowProvisioningUpdates` with an ASC API key (cloud-managed signing,
+`app/ci/ExportOptions-*.plist`), Android Gradle `signingConfigs.release` from
+`ANDROID_KEYSTORE_*` env; versions injected from tag + run number. No fastlane.
 
 **Dongle drivers** ([web/drivers/](web/drivers/)). Pluggable registry in
 [web/drivers/index.js](web/drivers/index.js) for USB-serial BLE-scanner dongles

@@ -1,0 +1,155 @@
+# Signed builds of the Sensor-BLE Capacitor app (app/).
+#
+# - tag app-v<semver>: signed IPA (uploaded to TestFlight), APK + AAB, all
+#   attached to a GitHub Release for the tag
+# - workflow_dispatch: same builds as workflow artifacts, no TestFlight upload
+#
+# Secrets are set by scripts/sync-app-secrets.sh. iOS signing uses Xcode's
+# automatic (cloud-managed) signing with an App Store Connect API key — no
+# certificates or profiles are stored anywhere.
+
+name: app-release
+
+on:
+  push:
+    tags: ['app-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      name: ${{ steps.v.outputs.name }}
+      code: ${{ steps.v.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/app-v* ]]; then
+            name="${GITHUB_REF#refs/tags/app-v}"
+          else
+            name="$(jq -r .version app/package.json)"
+          fi
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "code=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+  android:
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Web build + cap sync
+        run: |
+          bun install --frozen-lockfile
+          cd app && bun install --frozen-lockfile
+          bunx vite build && bunx cap sync android
+      - name: Keystore
+        run: echo "${{ secrets.ANDROID_KEYSTORE }}" | base64 -d > "$RUNNER_TEMP/release.keystore"
+      - name: Build signed APK + AAB
+        working-directory: app/android
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/release.keystore
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          ./gradlew --no-daemon assembleRelease bundleRelease \
+            -PversionCode=${{ needs.version.outputs.code }} \
+            -PversionName=${{ needs.version.outputs.name }}
+          mkdir -p "$RUNNER_TEMP/out"
+          cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/out/sensor-ble-${{ needs.version.outputs.name }}.apk"
+          cp app/build/outputs/bundle/release/app-release.aab "$RUNNER_TEMP/out/sensor-ble-${{ needs.version.outputs.name }}.aab"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: ${{ runner.temp }}/out/*
+
+  ios:
+    needs: version
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Select newest Xcode
+        run: |
+          xc="$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)"
+          sudo xcode-select -s "$xc"
+          xcodebuild -version
+      - name: Web build + cap sync
+        run: |
+          bun install --frozen-lockfile
+          cd app && bun install --frozen-lockfile
+          bunx vite build && bunx cap sync ios
+      - name: App Store Connect API key
+        run: |
+          mkdir -p "$RUNNER_TEMP/asc"
+          echo "${{ secrets.ASC_KEY_P8 }}" | base64 -d > "$RUNNER_TEMP/asc/AuthKey.p8"
+      # The archive is built unsigned; signing happens at export, where
+      # -allowProvisioningUpdates + the API key lets Xcode fetch the profile and
+      # use the cloud-managed distribution certificate. Archiving signed would
+      # make Xcode mint a new development certificate on every runner.
+      - name: Archive (unsigned)
+        working-directory: app/ios/App
+        run: |
+          xcodebuild archive \
+            -project App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            MARKETING_VERSION=${{ needs.version.outputs.name }} \
+            CURRENT_PROJECT_VERSION=${{ needs.version.outputs.code }} \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+      - name: Export signed IPA
+        working-directory: app
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -exportOptionsPlist ci/ExportOptions-export.plist \
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/asc/AuthKey.p8" \
+            -authenticationKeyID "${{ secrets.ASC_KEY_ID }}" \
+            -authenticationKeyIssuerID "${{ secrets.ASC_ISSUER_ID }}"
+          mkdir -p "$RUNNER_TEMP/out"
+          cp "$RUNNER_TEMP"/export/*.ipa "$RUNNER_TEMP/out/sensor-ble-${{ needs.version.outputs.name }}.ipa"
+      - name: Upload to TestFlight
+        if: startsWith(github.ref, 'refs/tags/app-v')
+        working-directory: app
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -exportOptionsPlist ci/ExportOptions-upload.plist \
+            -exportPath "$RUNNER_TEMP/upload" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/asc/AuthKey.p8" \
+            -authenticationKeyID "${{ secrets.ASC_KEY_ID }}" \
+            -authenticationKeyIssuerID "${{ secrets.ASC_ISSUER_ID }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios
+          path: ${{ runner.temp }}/out/*
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/app-v')
+    needs: [version, android, ios]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - name: GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" out/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Sensor-BLE ${{ needs.version.outputs.name }}" \
+            --notes "Signed builds of the Sensor-BLE app (app/). IPA: App Store Connect distribution (also uploaded to TestFlight). APK: sideload. AAB: Play."

@@ -293,6 +293,46 @@ The `run-*` scripts target specific devices (`--target` in
 (`bunx cap run android --list`). iOS signing uses the development team set in
 the Xcode project.
 
+### Signed release builds (GitHub Actions)
+
+[.github/workflows/app-release.yml](.github/workflows/app-release.yml) builds a
+signed **IPA** (App Store Connect distribution), a signed **APK** (sideload)
+and an **AAB** (Play) — no fastlane:
+
+- **iOS:** unsigned `xcodebuild archive`, then `-exportArchive
+  -allowProvisioningUpdates` with an App Store Connect API key. Xcode's
+  automatic signing fetches the profile and uses Apple's cloud-managed
+  distribution certificate, so no certificates or profiles are stored anywhere.
+- **Android:** plain Gradle `assembleRelease bundleRelease`; the release
+  `signingConfig` in [app/android/app/build.gradle](app/android/app/build.gradle)
+  reads the keystore from `ANDROID_KEYSTORE_*` env vars (unsigned when unset).
+- **Versions:** `versionName`/`MARKETING_VERSION` from the tag (or
+  `app/package.json`), `versionCode`/`CURRENT_PROJECT_VERSION` = run number.
+
+| Trigger | Result |
+|---|---|
+| tag `app-v0.1.0` | IPA uploaded to TestFlight; IPA + APK + AAB attached to a GitHub Release |
+| *Run workflow* (dispatch) | IPA + APK + AAB as workflow artifacts |
+
+`app-v*` keeps app releases separate from the web/library `v*` tags.
+
+One-time setup:
+
+1. Create the app record for `com.haberler.sensorble` in App Store Connect
+   (the API can't create apps; the bundle ID is registered automatically).
+2. An App Store Connect API key with the **Admin** or **App Manager** role.
+3. Push the secrets into the repo (values come from your environment; the
+   script only pipes them to `gh secret set`):
+
+   ```sh
+   ASC_KEY_PATH=~/.secrets.d/AuthKey_XXXX.p8 ASC_KEY_ID=XXXX ASC_ISSUER_ID=… \
+   ANDROID_KEYSTORE_PATH=~/.secrets.d/mah-upload-key.keystore \
+   ANDROID_KEYSTORE_PASSWORD=… ANDROID_KEY_ALIAS=… ANDROID_KEY_PASSWORD=… \
+   scripts/sync-app-secrets.sh                 # or --repo owner/name, --ios-only, --android-only
+   ```
+
+Release: `git tag app-v0.1.0 && git push origin app-v0.1.0`.
+
 Platform limits:
 - **iOS** hides MAC addresses (the id is a per-phone UUID), so decoders that
   need the MAC fail; iOS also strips iBeacon advertisements, and scanning is
