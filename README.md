@@ -321,15 +321,15 @@ One-time setup:
 1. Create the app record for `com.haberler.sensorble` in App Store Connect
    (the API can't create apps; the bundle ID is registered automatically).
 2. An App Store Connect API key with the **Admin** or **App Manager** role.
-3. Push the secrets into the repo (values come from your environment; the
-   script only pipes them to `gh secret set`):
+3. Fill in the app-signing block of `.env` (see [.env.example](.env.example))
+   and push the secrets into the repo — the script only pipes the values to
+   `gh secret set`, it never prints them:
 
    ```sh
-   ASC_KEY_PATH=~/.secrets.d/AuthKey_XXXX.p8 ASC_KEY_ID=XXXX ASC_ISSUER_ID=… \
-   ANDROID_KEYSTORE_PATH=~/.secrets.d/mah-upload-key.keystore \
-   ANDROID_KEYSTORE_PASSWORD=… ANDROID_KEY_ALIAS=… ANDROID_KEY_PASSWORD=… \
-   scripts/sync-app-secrets.sh                 # or --repo owner/name, --ios-only, --android-only
+   scripts/sync-app-secrets.sh --env-file .env   # or --repo owner/name, --ios-only, --android-only
    ```
+
+   The same variables can come from the process environment instead.
 
 Release: `git tag app-v0.1.0 && git push origin app-v0.1.0`.
 

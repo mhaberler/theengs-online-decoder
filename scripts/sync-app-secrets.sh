@@ -5,18 +5,34 @@
 # piped to `gh secret set`; nothing is echoed.
 #
 # Usage:
+#   scripts/sync-app-secrets.sh --env-file .env     # vars as in .env.example
+# or
 #   ASC_KEY_PATH=~/.secrets.d/AuthKey_XXXX.p8 ASC_KEY_ID=XXXX ASC_ISSUER_ID=… \
 #   ANDROID_KEYSTORE_PATH=~/.secrets.d/mah-upload-key.keystore \
 #   ANDROID_KEYSTORE_PASSWORD=… ANDROID_KEY_ALIAS=… ANDROID_KEY_PASSWORD=… \
 #   scripts/sync-app-secrets.sh [--repo owner/name] [--ios-only|--android-only]
 #                               [--env-file FILE]...
 #
-# --env-file sources KEY=value files first (e.g. an app's .env with the
-# keystore settings). fastlane-style names are accepted as fallbacks:
+# --env-file reads KEY=value files literally (e.g. this repo's .env, see
+# .env.example); their values win over the shell environment. fastlane-style names are accepted as fallbacks:
 # FASTLANE_KEY_PATH/FASTLANE_KEY_ID/FASTLANE_ISSUER_ID for the ASC_* vars and
 # ANDROID_KEYSTORE_ALIAS_PASSWORD for ANDROID_KEY_PASSWORD.
 # Without --repo, the current directory's GitHub repo is used.
 set -euo pipefail
+
+# KEY=value lines, read literally (no shell expansion, so passwords may hold
+# $ or spaces; one pair of surrounding quotes is stripped). An explicit env
+# file wins over variables already exported in the shell.
+load_env() {
+  [[ -r "$1" ]] || { echo "cannot read env file: $1" >&2; exit 2; }
+  local key value
+  while IFS='=' read -r key value || [[ -n "$key" ]]; do
+    key="${key//[[:space:]]/}"
+    [[ -z "$key" || "$key" == \#* ]] && continue
+    [[ "$value" =~ ^\"(.*)\"$ || "$value" =~ ^\'(.*)\'$ ]] && value="${BASH_REMATCH[1]}"
+    export "$key=$value"
+  done < "$1"
+}
 
 repo=() ios=1 android=1
 while [[ $# -gt 0 ]]; do
@@ -24,8 +40,8 @@ while [[ $# -gt 0 ]]; do
     --repo) repo=(--repo "$2"); shift 2 ;;
     --ios-only) android=0; shift ;;
     --android-only) ios=0; shift ;;
-    --env-file) set -a; source "${2/#\~/$HOME}"; set +a; shift 2 ;;
-    -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
+    --env-file) load_env "${2/#\~/$HOME}"; shift 2 ;;
+    -h|--help) sed -n '2,22p' "$0"; exit 0 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
