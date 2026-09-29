@@ -320,7 +320,10 @@ One-time setup:
 
 1. Create the app record for `com.haberler.sensorble` in App Store Connect
    (the API can't create apps; the bundle ID is registered automatically).
-2. An App Store Connect API key with the **Admin** or **App Manager** role.
+2. An App Store Connect API key with the **Admin** role (Users and Access →
+   Integrations → App Store Connect API → Team Keys). Only Admin keys may use
+   cloud-managed distribution certificates; an App Manager key fails export
+   with "Cloud signing permission error".
 3. Fill in the app-signing block of `.env` (see [.env.example](.env.example))
    and push the secrets into the repo — the script only pipes the values to
    `gh secret set`, it never prints them:
