@@ -17,6 +17,7 @@ export function initSerialJsonata(root, { conn, readyMessage } = {}) {
   const core = initSerialCore(root, {
     prefix: 'jso',
     decode: evaluateAdv,
+    decoderName: 'jsonata',
     conn,
   });
   if (!core.available) return;

@@ -1,13 +1,13 @@
 'use strict';
 
 import { initSerialCore } from './serial-core.js';
-import { decodeEntry, builtinDecoders, isBuiltinName } from './sensorble-decode.js';
+import { decodeEntry, decoderOf, builtinDecoders, isBuiltinName } from './sensorble-decode.js';
 import * as custom from './sensorble-custom.js';
 
 // `conn` and `readyMessage` let the Capacitor app reuse this tab over the
 // phone's BLE radio; the web app passes neither and gets the dongle.
 export function initSerialSensorble(root, { conn, readyMessage } = {}) {
-  const core = initSerialCore(root, { prefix: 'sbl', decode: decodeEntry, conn });
+  const core = initSerialCore(root, { prefix: 'sbl', decode: decodeEntry, decoderName: decoderOf, conn });
 
   const urlEl = root.querySelector('#sbl-custom-url');
   const installEl = root.querySelector('#sbl-custom-install');

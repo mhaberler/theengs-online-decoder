@@ -20,7 +20,11 @@ const LAST_SEEN_TTL_MS = 60_000;
 // PROFILES, renderDriverControls) can drive the view instead, e.g. a phone's
 // BLE radio in the Capacitor app. Connection controls may be absent from the
 // markup.
-export function initSerialCore(root, { prefix, decode, conn = serialConn }) {
+//
+// `decoderName` labels which decoder produced a row, shown in brackets after
+// the model: a fixed string for single-decoder tabs, or a function (dec) =>
+// name when several decoders compete. The decoded JSON is left untouched.
+export function initSerialCore(root, { prefix, decode, conn = serialConn, decoderName }) {
   const q = (id) => root.querySelector(`#${prefix}-${id}`);
   const els = {
     connect:    q('connect'),
@@ -157,7 +161,11 @@ export function initSerialCore(root, { prefix, decode, conn = serialConn }) {
       }
     }
     const model = dec?.model_id || dec?.model || '';
-    const tail = err ? '⚠ ' + err.message : model ? '→ ' + model : '(undecoded)';
+    const by = dec ? (typeof decoderName === 'function' ? decoderName(dec) : decoderName) : '';
+    // Skip the bracket when it would repeat the model (built-in sensor-ble
+    // decoders report their decoderName as model_id).
+    const label = [model, by && by !== model ? `[${by}]` : ''].filter(Boolean).join(' ');
+    const tail = err ? '⚠ ' + err.message : dec ? '→ ' + (label || '(no model)') : '(undecoded)';
     const header = document.createElement('div');
     header.className = 'log-head';
     header.textContent = `[${t}] ${id}${randomMark} ${rssi}${ch}${advAbbr}${dt} ${tail}`;

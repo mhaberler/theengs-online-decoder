@@ -64,7 +64,10 @@ dongle stack decoding via the `sensor-ble` library), **Radio**
 The dongle connection lives in [web/serial-conn.js](web/serial-conn.js) — a
 singleton (port, autodetect, read loop, scan state) shared by both serial tabs;
 [web/serial-core.js](web/serial-core.js) is the per-tab view (log rendering,
-counters) and tabs differ only in the `decode` callback;
+counters) and tabs differ only in the `decode` callback and the `decoderName`
+label shown in each row's headline (`→ model [decoder]`; a string, or for
+sensor-ble `decoderOf(result)`, a WeakMap lookup so the decoded JSON stays
+untouched);
 the JSONata expression pair lives in [web/jsonata-exprs.js](web/jsonata-exprs.js)
 (one persisted pair shared by the File and Serial/JSONata tabs; storage is
 pluggable and loaded by an async `init()`).

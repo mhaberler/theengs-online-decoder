@@ -7,6 +7,7 @@ export function initSerial(root) {
   let decoder = null;
   const core = initSerialCore(root, {
     prefix: 'ser',
+    decoderName: 'theengs',
     decode: (advJson) => (decoder ? decodeEntry(decoder, advJson) : null),
   });
   if (!core.available) return;

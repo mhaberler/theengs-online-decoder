@@ -96,6 +96,14 @@ export function isDecoderValid(decoder, adv) {
   return false;
 }
 
+// Which decoder produced a decodeEntry() result — kept beside the result, not
+// in it, so the decoded JSON stays exactly what the decoder returned.
+const producedBy = new WeakMap();
+
+export function decoderOf(result) {
+  return producedBy.get(result) ?? '';
+}
+
 // Returns a decoded object for serial-core (model_id drives the row header), or
 // null when nothing matches or the matching decoder rejects the payload.
 export function decodeEntry(entry) {
@@ -109,12 +117,14 @@ export function decodeEntry(entry) {
     // Decoders re-validate their own payloads and return null on a mismatch;
     // keep trying so one company ID shared by several devices still resolves.
     if (!values || !Object.keys(values).length) continue;
-    return {
+    const result = {
       model_id: decoder.decoderName,
       ...(entry.id ? { id: entry.id } : {}),
       ...(entry.rssi !== undefined ? { rssi: entry.rssi } : {}),
       ...values,
     };
+    producedBy.set(result, decoder.decoderName);
+    return result;
   }
   return null;
 }
