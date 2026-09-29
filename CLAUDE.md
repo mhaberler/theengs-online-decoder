@@ -28,6 +28,7 @@ node --test test/decode.test.js   # single test file
 bun run decode-log <file>  # decode a sensorlogs-style JSON file from the CLI
 bun run decode-sensorlogs  # decode everything in sensorlogs/*.json
 bun run build-sensorble-theengs  # regenerate sensor-ble-decoders/theengs.js
+bun run publish-gist <name>...   # publish sensor-ble-decoders/<name> as secret gist(s), print raw URLs
 
 bun run web                # zero-dep static server (serve.js) on :8000
 bun run web:dev            # vite dev server on :5173

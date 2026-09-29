@@ -34,6 +34,7 @@
     "web:preview": "vite preview --outDir web/dist",
     "deploy-web": "bash scripts/deploy-web.sh",
     "build-sensorble-theengs": "node scripts/build-sensorble-theengs.js",
+    "publish-gist": "node scripts/publish-gist.js",
     "test": "node --test test/*.test.js"
   },
   "engines": {

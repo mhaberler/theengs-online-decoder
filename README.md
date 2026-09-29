@@ -228,6 +228,43 @@ bun run build-sensorble-theengs   # regenerate after a theengs-decoder bump
 Install it via the raw URL of wherever you publish it. Sensor Logger doesn't
 know `matchAll`, so there the decoder installs but never matches.
 
+### Publishing decoders as gists
+
+`bun run publish-gist` publishes selected files from `sensor-ble-decoders/` as
+**secret**, single-file gists and prints the raw URL to paste into Sensor
+Logger or the Serial/sensor-ble tab. It needs the [GitHub CLI](https://cli.github.com/)
+logged in with the `gist` scope (`gh auth login`).
+
+```sh
+bun run publish-gist theengs.js            # create or update; prints raw URLs
+bun run publish-gist theengs.js other.js   # several at once
+```
+
+```text
+theengs.js
+  raw:    https://gist.githubusercontent.com/<user>/<id>/raw/theengs.js
+  pinned: https://gist.githubusercontent.com/<user>/<id>/raw/<revision>/theengs.js
+```
+
+- Re-publishing **updates the same gist**, so the unpinned `raw` URL stays
+  valid and **Reload** (tab) / refresh (Sensor Logger) picks up the new version.
+  The `pinned` URL always serves that exact revision.
+- Generated decoders (`theengs.js`) are regenerated before upload.
+- The name → gist id map is kept in `.gists.json` (untracked). If it's lost,
+  the gist is found again by its description,
+  `sensor-ble decoder: <name> (theengs-online-decoder)`.
+- "Secret" means unlisted, not private: anyone with the URL can read it (and
+  the sources are public in this repo anyway).
+
+Handy `gh` commands:
+
+```sh
+gh gist list --secret                      # your secret gists
+gh gist view <id> --files                  # files in a gist
+gh gist view <id> --raw -f theengs.js      # print a published file
+gh gist delete <id>                        # unpublish — also drop its entry from .gists.json
+```
+
 ## Install
 
 ```sh
