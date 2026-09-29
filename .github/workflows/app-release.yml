@@ -38,7 +38,9 @@ jobs:
 
   android:
     needs: version
-    runs-on: ubuntu-latest
+    # Pinned: relies on the image's preinstalled Android SDK. ubuntu-latest
+    # moves to Ubuntu 26 from 2026-10-19; switch after checking the SDK there.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
