@@ -1,7 +1,7 @@
 {
   "name": "sensor-ble-app",
   "private": true,
-  "version": "0.3.1",
+  "version": "0.4.0",
   "type": "module",
   "description": "Sensor-BLE: Capacitor app decoding phone BLE scans with sensor-ble decoders",
   "license": "GPL-3.0-only",
