@@ -91,7 +91,22 @@ expect — it must be imported before them, since they use a bare global.
 [web/sensorble-custom.js](web/sensorble-custom.js) installs decoders from a URL
 at runtime (fetch → blob URL → dynamic `import`, never `eval`), caching URL and
 source in localStorage so they re-register offline; a custom decoder overrides a
-built-in of the same `decoderName`. Verify shim changes against the decoders'
+built-in of the same `decoderName`. Catalog installs pass `{ catalogUrl,
+version, sha256 }` and are refused on a sha256 mismatch.
+
+**Decoders tab / catalogs.** [web/decoders-tab.js](web/decoders-tab.js) is the
+Decoders tab (web and app): Installed + built-in toggles, Browse, Catalogs,
+install-from-URL; the sensor-ble tab only scans and logs.
+[web/decoder-catalog.js](web/decoder-catalog.js) keeps learned catalogs
+(storage key `sensorble-catalogs`, with each catalog's cached index; preset
+`PRESET_CATALOG`) and fetches them — page URL → `<link rel="alternate"
+type="application/vnd.sensorble.catalog+json">` → `decoders.json` (schema 1).
+Pure, Node-tested helpers (version compare, UUID normalization, matching
+against `seenSignals()` from sensorble-decode, index resolution, sha256) live
+in [web/catalog-util.js](web/catalog-util.js). The catalog format and a
+forkable publisher are in the separate template repo
+`mhaberler/sensor-ble-decoder-catalog`. The web app handles `?catalog=<url>`
+(confirm, then add). Verify shim changes against the decoders'
 own fixtures: each `node_modules/sensor-ble/devices/*.js` exports a `tests`
 array of given/expected pairs. Local extensions to the sensor-ble contract:
 `matchAll: true` matches every advertisement and such decoders are tried

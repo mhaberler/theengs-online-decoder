@@ -60,10 +60,16 @@
   .expr-pane label { display: block; font-weight: 600; margin-bottom: .25rem; }
   .expr-error { color: #c62828; font-family: ui-monospace, monospace; font-size: 12px; min-height: 1.2em; white-space: pre-wrap; }
   /* sensor-ble custom decoders */
-  #sbl-custom-url { flex: 1; min-width: 20rem; font-family: ui-monospace, monospace; font-size: 12px; padding: .4rem; }
+  .dec-url { flex: 1; min-width: 20rem; font-family: ui-monospace, monospace; font-size: 12px; padding: .4rem; }
+  .dec-status { color: #444; min-height: 1.2em; }
+  .decoder-ver { font-weight: 400; color: #666; font-family: system-ui, sans-serif; font-size: 12px; }
+  .decoder-desc { font-size: 13px; margin: .15rem 0; }
+  .decoder-meta { font-size: 11px; color: #666; font-family: ui-monospace, monospace; margin: .1rem 0 .3rem; word-break: break-all; }
+  .decoder-badge.decoder-update { color: #0d47a1; background: #e3f2fd; }
+  .decoder-badge.decoder-suggested { color: #1b5e20; background: #e8f5e9; }
   .decoder-builtins { font-size: 12px; color: #555; margin-bottom: .5rem; }
   .decoder-builtins span { font-family: ui-monospace, monospace; color: #333; }
-  #sbl-builtins label { margin-right: .75rem; white-space: nowrap; cursor: pointer; }
+  #dec-builtins label { margin-right: .75rem; white-space: nowrap; cursor: pointer; }
   .decoder-help { font-size: 12px; color: #555; margin: .25rem 0 .75rem; }
   .decoder-list { margin-top: .75rem; display: flex; flex-direction: column; gap: .5rem; }
   .decoder-empty { font-size: 12px; color: #777; }
@@ -95,6 +101,7 @@
   <button class="tab-btn" data-tab="serial" role="tab">Serial/theengs</button>
   <button class="tab-btn" data-tab="serial-jsonata" role="tab">Serial/JSONata</button>
   <button class="tab-btn" data-tab="serial-sensorble" role="tab">Serial/sensor-ble</button>
+  <button class="tab-btn" data-tab="decoders" role="tab">Decoders</button>
   <button class="tab-btn" data-tab="radio" role="tab">BLE radio</button>
 </div>
 
@@ -252,23 +259,6 @@
   </fieldset>
 
   <fieldset>
-    <legend>Decoders</legend>
-    <div class="decoder-builtins">Built-in (uncheck to disable): <span id="sbl-builtins"></span></div>
-    <p class="decoder-help">Install a custom decoder from a URL serving a self-contained ES module
-      that exports a <code>decoder</code> object (see the
-      <a href="https://github.com/tszheichoi/sensor-ble#loading-a-custom-decoder-into-sensor-logger" target="_blank" rel="noopener">sensor-ble API</a>).
-      Use the <strong>raw</strong> file URL. Installed decoders are cached locally and re-registered on
-      every load; one whose <code>decoderName</code> matches a built-in replaces it.
-      <strong>Only install decoders you trust — the code runs in this page.</strong></p>
-    <div class="row">
-      <input type="url" id="sbl-custom-url" placeholder="https://gist.githubusercontent.com/&hellip;/raw/&hellip;.js" spellcheck="false">
-      <button id="sbl-custom-install">Install</button>
-    </div>
-    <div id="sbl-custom-error" class="expr-error"></div>
-    <div id="sbl-custom-list" class="decoder-list"></div>
-  </fieldset>
-
-  <fieldset>
     <legend>Scan</legend>
     <div class="row">
       <button id="sbl-scan"><span id="sbl-indicator" class="scan-indicator" data-state="idle"></span><span>Start scan</span></button>
@@ -282,6 +272,52 @@
       <span id="sbl-searchcount" class="log-searchcount"></span>
     </div>
     <div id="sbl-log" class="live-log" aria-live="polite"></div>
+  </fieldset>
+</section>
+
+<!-- Decoders tab: installed decoders, built-in toggles, catalogs (decoders-tab.js) -->
+<section class="tab-panel" data-panel="decoders">
+  <p>Decoders used by the Serial/sensor-ble tab. Install them from <strong>catalogs</strong> —
+    websites listing sensor-ble decoders (make your own from the
+    <a href="https://github.com/mhaberler/sensor-ble-decoder-catalog" target="_blank" rel="noopener">catalog template</a>) —
+    or from a decoder URL. <strong>Only install decoders you trust — the code runs in this page.</strong></p>
+  <div id="dec-status" class="dec-status"></div>
+
+  <fieldset>
+    <legend>Installed</legend>
+    <div id="dec-installed" class="decoder-list"></div>
+    <div class="decoder-builtins">Built-in (uncheck to disable): <span id="dec-builtins"></span></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Browse catalogs</legend>
+    <div class="row">
+      <input type="search" id="dec-search" class="log-search" placeholder="Search decoders&hellip;" spellcheck="false">
+      <button id="dec-refresh">Refresh</button>
+    </div>
+    <div id="dec-browse" class="decoder-list"></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Catalogs</legend>
+    <div class="row">
+      <input type="url" id="dec-catalog-url" class="dec-url" placeholder="https://&hellip;github.io/&hellip; (catalog page or decoders.json)" spellcheck="false">
+      <button id="dec-catalog-add">Add catalog</button>
+    </div>
+    <div id="dec-catalog-error" class="expr-error"></div>
+    <div id="dec-catalogs" class="decoder-list"></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Install from URL</legend>
+    <p class="decoder-help">The <strong>raw</strong> URL of a self-contained ES module exporting a
+      <code>decoder</code> object (<a href="https://github.com/tszheichoi/sensor-ble#loading-a-custom-decoder-into-sensor-logger" target="_blank" rel="noopener">sensor-ble API</a>).
+      Not checked against a catalog hash.</p>
+    <div class="row">
+      <input type="url" id="dec-custom-url" class="dec-url" placeholder="https://gist.githubusercontent.com/&hellip;/raw/&hellip;.js" spellcheck="false">
+      <button id="dec-custom-install">Install</button>
+    </div>
+    <div id="dec-custom-error" class="expr-error"></div>
   </fieldset>
 </section>
 

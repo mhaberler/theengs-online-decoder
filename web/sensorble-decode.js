@@ -108,6 +108,21 @@ export function isDecoderValid(decoder, adv) {
   return false;
 }
 
+// What recent adverts looked like, for suggesting catalog decoders that would
+// match them (decoders-tab.js). Bounded: cleared when it grows too large.
+const seen = { manufacturers: new Set(), serviceUUIDs: new Set(), names: new Set() };
+const SEEN_MAX = 500;
+
+function remember(set, value) {
+  if (!value) return;
+  if (set.size >= SEEN_MAX) set.clear();
+  set.add(value);
+}
+
+export function seenSignals() {
+  return seen;
+}
+
 // Which decoder produced a decodeEntry() result — kept beside the result, not
 // in it, so the decoded JSON stays exactly what the decoder returned.
 const producedBy = new WeakMap();
@@ -121,6 +136,9 @@ export function decoderOf(result) {
 export function decodeEntry(entry) {
   const adv = readEntry(entry);
   if (!adv.manufacturerData && !Object.keys(adv.serviceDataMap).length) return null;
+  if (adv.manufacturerData?.length >= 2) remember(seen.manufacturers, adv.manufacturerData.subarray(0, 2).toString('hex'));
+  for (const u of adv.serviceUuids) remember(seen.serviceUUIDs, u);
+  remember(seen.names, adv.localName);
 
   const meta = { name: adv.localName, id: entry.id };
   for (const decoder of activeDecoders()) {

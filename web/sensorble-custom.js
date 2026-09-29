@@ -11,11 +11,14 @@
 // grounds, so the source is fetched first and re-wrapped locally.
 
 import { setCustomDecoders, setDisabledBuiltins } from './sensorble-decode.js';
+import { sha256Hex } from './catalog-util.js';
 
 const KEY = 'sensorble-custom-decoders';
 const KEY_DISABLED = 'sensorble-disabled-builtins';
 
-let installed = []; // [{ url, source, decoderName, installedAt, decoder, error }]
+// [{ url, source, decoderName, installedAt, decoder, error,
+//    catalogUrl?, version?, sha256? }]   (the last three for catalog installs)
+let installed = [];
 let disabled = new Set(); // built-in decoderNames switched off
 
 // Async key/value store for the cache. localStorage by default; the Capacitor
@@ -29,6 +32,10 @@ export function setStorage(s) {
   storage = s;
 }
 
+// The same store, for other modules' settings (decoder-catalog.js).
+export const kvGet = (key) => storage.get(key);
+export const kvSet = (key, value) => storage.set(key, value);
+
 async function load() {
   try {
     const raw = await storage.get(KEY);
@@ -39,8 +46,8 @@ async function load() {
 }
 
 function persist() {
-  const plain = installed.map(({ url, source, decoderName, installedAt }) => ({
-    url, source, decoderName, installedAt,
+  const plain = installed.map(({ url, source, decoderName, installedAt, catalogUrl, version, sha256 }) => ({
+    url, source, decoderName, installedAt, catalogUrl, version, sha256,
   }));
   storage.set(KEY, JSON.stringify(plain))
     .catch((e) => console.error('sensorble-custom: persist failed', e));
@@ -126,10 +133,19 @@ export async function restore() {
   return installed;
 }
 
-export async function install(url) {
+// `from` marks a catalog install: { catalogUrl, version, sha256 }. The file
+// must then hash to the catalog's sha256, so a file changed after publishing
+// is refused. Manual installs (no `from`) are unchecked, as in Sensor Logger.
+export async function install(url, from = null) {
   const trimmed = url.trim();
   if (!trimmed) throw new Error('Enter a decoder URL');
   const source = await fetchSource(trimmed);
+  if (from?.sha256) {
+    const actual = await sha256Hex(source);
+    if (actual !== from.sha256.toLowerCase()) {
+      throw new Error('sha256 mismatch — the file differs from what the catalog published (refresh the catalog, or ask its maintainer)');
+    }
+  }
   const decoder = await importDecoder(source);
   const rec = {
     url: trimmed,
@@ -138,6 +154,9 @@ export async function install(url) {
     installedAt: new Date().toISOString(),
     decoder,
     error: null,
+    catalogUrl: from?.catalogUrl,
+    version: from?.version ?? decoder.version,
+    sha256: from?.sha256,
   };
   // Re-installing the same URL, or a decoder of the same name, replaces it
   // rather than stacking duplicates.

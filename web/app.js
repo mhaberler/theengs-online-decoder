@@ -4,6 +4,7 @@ import { loadDecoder, decodeEntry } from './decoder.js';
 import { initSerial } from './serial.js';
 import { initSerialJsonata } from './serial-jsonata.js';
 import { initSerialSensorble } from './serial-sensorble.js';
+import { initDecodersTab } from './decoders-tab.js';
 import { initRadio } from './radio.js';
 import { init as initExprs, bindExprPanes, evaluateAdv } from './jsonata-exprs.js';
 import { readZipEntries } from './zip.js';
@@ -196,6 +197,22 @@ runEl.addEventListener('click', async () => {
 initSerial(document.querySelector('[data-panel="serial"]'));
 initSerialJsonata(document.querySelector('[data-panel="serial-jsonata"]'));
 initSerialSensorble(document.querySelector('[data-panel="serial-sensorble"]'));
+
+// --- Decoders tab ---
+const decodersTab = initDecodersTab(document.querySelector('[data-panel="decoders"]'));
+
+// ?catalog=<url> (the "Add to Sensor-BLE" link / QR code on a catalog page):
+// confirm, add it, show the Decoders tab, and drop the parameter from the URL.
+const catalogParam = new URLSearchParams(location.search).get('catalog');
+if (catalogParam) {
+  const url = new URL(location.href);
+  url.searchParams.delete('catalog');
+  history.replaceState(null, '', url);
+  document.querySelector('.tab-btn[data-tab="decoders"]')?.click();
+  if (confirm(`Add this decoder catalog?\n\n${catalogParam}\n\nOnly add catalogs you trust — their decoders run in this page.`)) {
+    decodersTab.addCatalog(catalogParam);
+  }
+}
 
 // --- BLE radio tab (opt-in via ?webble=true) ---
 const webbleEnabled = new URLSearchParams(location.search).get('webble') === 'true';

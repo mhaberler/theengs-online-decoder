@@ -31,15 +31,25 @@ code { font-size: 12px; }
 .scan-indicator[data-state="scanning"]  { background: #2e7d32; box-shadow: 0 0 6px #2e7d32; animation: pulse 1.2s ease-in-out infinite; }
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
 
-/* Decoders (collapsible to leave room for the log) */
+/* Collapsible panes (JSONata expressions) */
 details.decoders { border: 1px solid #ccc; border-radius: 6px; padding: .4rem .6rem; }
 details.decoders > summary { cursor: pointer; font-weight: 600; font-size: 14px; color: #333; }
-#sbl-custom-url { flex: 1; min-width: 0; font-family: ui-monospace, monospace; font-size: 16px; padding: .55rem; }
+
+/* Decoders tab: a scrolling page rather than a fixed log layout */
+.tab-panel.scroll { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.tab-panel.scroll section { border-top: 1px solid #ddd; padding-top: .4rem; }
+.tab-panel.scroll h2 { font-size: 15px; margin: .2rem 0 .4rem; }
+.dec-url { flex: 1; min-width: 0; font-family: ui-monospace, monospace; font-size: 16px; padding: .55rem; }
+.decoder-ver { font-weight: 400; color: #666; font-family: system-ui, sans-serif; font-size: 12px; }
+.decoder-desc { font-size: 13px; margin: .15rem 0; }
+.decoder-meta { font-size: 11px; color: #666; font-family: ui-monospace, monospace; margin: .1rem 0 .3rem; word-break: break-all; }
+.decoder-badge.decoder-update { color: #0d47a1; background: #e3f2fd; }
+.decoder-badge.decoder-suggested { color: #1b5e20; background: #e8f5e9; }
 .decoder-builtins { font-size: 12px; color: #555; margin: .4rem 0; }
 .decoder-builtins span { font-family: ui-monospace, monospace; color: #333; }
-#sbl-builtins { display: flex; flex-wrap: wrap; gap: .25rem .9rem; margin-top: .3rem; }
-#sbl-builtins label { display: inline-flex; align-items: center; gap: .3rem; min-height: 36px; font-size: 14px; }
-#sbl-builtins input { width: 20px; height: 20px; }
+#dec-builtins { display: flex; flex-wrap: wrap; gap: .25rem .9rem; margin-top: .3rem; }
+#dec-builtins label { display: inline-flex; align-items: center; gap: .3rem; min-height: 36px; font-size: 14px; }
+#dec-builtins input { width: 20px; height: 20px; }
 .decoder-help { font-size: 12px; color: #555; margin: .25rem 0 .5rem; }
 .decoder-list { margin-top: .5rem; display: flex; flex-direction: column; gap: .5rem; }
 .decoder-empty { font-size: 12px; color: #777; }

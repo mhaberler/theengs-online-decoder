@@ -188,18 +188,41 @@ Matching follows the library's own rule — local name, then manufacturer ID,
 then service UUID — so a decoder matches here exactly as it does under
 sensor-ble's Node harness.
 
-Each built-in has a checkbox in the Decoders panel: uncheck it to skip that
+Each built-in has a checkbox in the Decoders tab: uncheck it to skip that
 decoder from the next advert on (e.g. to test a custom or the Theengs decoder
 alone). The choice is remembered, like installed decoders.
 
-### Custom decoders
+### Decoders tab: catalogs and custom decoders
 
-Decoders can be installed at runtime from a URL, the same way Sensor Logger
-loads them. Paste the URL of a self-contained ES module that exports a
-`decoder` object (see the
-[sensor-ble API](https://github.com/tszheichoi/sensor-ble#sensor-ble-api))
-and press **Install**. A GitHub Gist works well — use the **raw** file URL; a
-`.../blob/...` link returns HTML and is rejected.
+Decoders for the sensor-ble tab are managed in the **Decoders** tab (also a
+tab in the mobile app):
+
+- **Installed** — custom decoders, with Reload / Remove / Update, and one
+  checkbox per built-in (uncheck to disable).
+- **Browse catalogs** — every decoder listed by your catalogs, searchable;
+  decoders matching devices seen in recent scans are marked and listed first.
+  **Install** is one tap: the file must match the catalog's `sha256`, or it is
+  refused. When a catalog lists a newer `version`, Installed and Browse offer
+  an update.
+- **Catalogs** — websites listing decoders. Add one by its page URL or its
+  `decoders.json` URL; the list and each catalog's last index are remembered
+  (Browse works offline). The example catalog
+  <https://mhaberler.github.io/sensor-ble-decoder-catalog/> is preset. A
+  catalog page's **Add to Sensor-BLE** button or QR code opens the web app with
+  `?catalog=<url>`, which asks to add it.
+- **Install from URL** — the raw URL of a self-contained ES module exporting a
+  `decoder` object (see the
+  [sensor-ble API](https://github.com/tszheichoi/sensor-ble#sensor-ble-api)),
+  the same way Sensor Logger loads them. A GitHub Gist works — use the **raw**
+  file URL; a `.../blob/...` link returns HTML and is rejected. Not checked
+  against any hash.
+
+To publish your own decoders as a catalog, create a repository from the
+[sensor-ble-decoder-catalog](https://github.com/mhaberler/sensor-ble-decoder-catalog)
+template: it builds a browsable page plus `decoders.json` on GitHub Pages and
+runs each decoder's tests.
+
+Details:
 
 - Installed decoders are cached in `localStorage` (URL *and* source) and
   re-registered on every load, so they keep working offline.
