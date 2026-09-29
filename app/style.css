@@ -37,6 +37,9 @@ details.decoders > summary { cursor: pointer; font-weight: 600; font-size: 14px;
 #sbl-custom-url { flex: 1; min-width: 0; font-family: ui-monospace, monospace; font-size: 16px; padding: .55rem; }
 .decoder-builtins { font-size: 12px; color: #555; margin: .4rem 0; }
 .decoder-builtins span { font-family: ui-monospace, monospace; color: #333; }
+#sbl-builtins { display: flex; flex-wrap: wrap; gap: .25rem .9rem; margin-top: .3rem; }
+#sbl-builtins label { display: inline-flex; align-items: center; gap: .3rem; min-height: 36px; font-size: 14px; }
+#sbl-builtins input { width: 20px; height: 20px; }
 .decoder-help { font-size: 12px; color: #555; margin: .25rem 0 .5rem; }
 .decoder-list { margin-top: .5rem; display: flex; flex-direction: column; gap: .5rem; }
 .decoder-empty { font-size: 12px; color: #777; }

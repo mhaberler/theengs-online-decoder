@@ -10,11 +10,13 @@
 // eval'd. Gist raw URLs serve text/plain, which import() would reject on MIME
 // grounds, so the source is fetched first and re-wrapped locally.
 
-import { setCustomDecoders } from './sensorble-decode.js';
+import { setCustomDecoders, setDisabledBuiltins } from './sensorble-decode.js';
 
 const KEY = 'sensorble-custom-decoders';
+const KEY_DISABLED = 'sensorble-disabled-builtins';
 
 let installed = []; // [{ url, source, decoderName, installedAt, decoder, error }]
+let disabled = new Set(); // built-in decoderNames switched off
 
 // Async key/value store for the cache. localStorage by default; the Capacitor
 // app swaps in @capacitor/preferences, since iOS may evict WebView storage.
@@ -88,8 +90,27 @@ async function fetchSource(url) {
   return text;
 }
 
-// Restore cached decoders without touching the network.
+// Built-in decoders switched off in the UI, persisted with the same storage.
+async function loadDisabled() {
+  try {
+    const raw = await storage.get(KEY_DISABLED);
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+export function setBuiltinEnabled(name, on) {
+  if (on) disabled.delete(name); else disabled.add(name);
+  setDisabledBuiltins(disabled);
+  storage.set(KEY_DISABLED, JSON.stringify([...disabled]))
+    .catch((e) => console.error('sensorble-custom: persist failed', e));
+}
+
+// Restore cached decoders (and the built-in toggles) without touching the network.
 export async function restore() {
+  disabled = await loadDisabled();
+  setDisabledBuiltins(disabled);
   installed = [];
   for (const entry of await load()) {
     const rec = { ...entry, decoder: null, error: null };

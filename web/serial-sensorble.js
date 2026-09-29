@@ -1,7 +1,7 @@
 'use strict';
 
 import { initSerialCore } from './serial-core.js';
-import { decodeEntry, decoderOf, builtinDecoders, isBuiltinName } from './sensorble-decode.js';
+import { decodeEntry, decoderOf, builtinDecoders, isBuiltinName, isBuiltinEnabled } from './sensorble-decode.js';
 import * as custom from './sensorble-custom.js';
 
 // `conn` and `readyMessage` let the Capacitor app reuse this tab over the
@@ -15,8 +15,20 @@ export function initSerialSensorble(root, { conn, readyMessage } = {}) {
   const errEl = root.querySelector('#sbl-custom-error');
   const builtinEl = root.querySelector('#sbl-builtins');
 
-  if (builtinEl) {
-    builtinEl.textContent = builtinDecoders.map((d) => d.decoderName).join(', ');
+  // One checkbox per built-in decoder; unchecking skips it from the next
+  // advert on (persisted by sensorble-custom).
+  function renderBuiltins() {
+    if (!builtinEl) return;
+    builtinEl.replaceChildren();
+    for (const d of builtinDecoders) {
+      const label = document.createElement('label');
+      const box = document.createElement('input');
+      box.type = 'checkbox';
+      box.checked = isBuiltinEnabled(d.decoderName);
+      box.addEventListener('change', () => custom.setBuiltinEnabled(d.decoderName, box.checked));
+      label.append(box, ' ' + d.decoderName);
+      builtinEl.appendChild(label);
+    }
   }
 
   function renderList() {
@@ -98,8 +110,10 @@ export function initSerialSensorble(root, { conn, readyMessage } = {}) {
     if (ev.key === 'Enter') runInstall(urlEl.value);
   });
 
-  // Re-register cached decoders from localStorage (no network), then show them.
-  custom.restore().then(renderList).catch(() => renderList());
+  // Re-register cached decoders and built-in toggles (no network), then show them.
+  const show = () => { renderBuiltins(); renderList(); };
+  renderBuiltins();
+  custom.restore().then(show).catch(show);
 
   if (!core.available) return;
   core.setStatus(`sensor-ble ready (${builtinDecoders.length} built-in decoders). ${readyMessage ?? 'Connect a port.'}`);

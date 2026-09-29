@@ -63,6 +63,7 @@
   #sbl-custom-url { flex: 1; min-width: 20rem; font-family: ui-monospace, monospace; font-size: 12px; padding: .4rem; }
   .decoder-builtins { font-size: 12px; color: #555; margin-bottom: .5rem; }
   .decoder-builtins span { font-family: ui-monospace, monospace; color: #333; }
+  #sbl-builtins label { margin-right: .75rem; white-space: nowrap; cursor: pointer; }
   .decoder-help { font-size: 12px; color: #555; margin: .25rem 0 .75rem; }
   .decoder-list { margin-top: .75rem; display: flex; flex-direction: column; gap: .5rem; }
   .decoder-empty { font-size: 12px; color: #777; }
@@ -252,7 +253,7 @@
 
   <fieldset>
     <legend>Decoders</legend>
-    <div class="decoder-builtins">Built-in: <span id="sbl-builtins"></span></div>
+    <div class="decoder-builtins">Built-in (uncheck to disable): <span id="sbl-builtins"></span></div>
     <p class="decoder-help">Install a custom decoder from a URL serving a self-contained ES module
       that exports a <code>decoder</code> object (see the
       <a href="https://github.com/tszheichoi/sensor-ble#loading-a-custom-decoder-into-sensor-logger" target="_blank" rel="noopener">sensor-ble API</a>).

@@ -16,6 +16,16 @@ import { decoders as allDecoders } from './sensor-ble/main.js';
 export const builtinDecoders = allDecoders.filter((d) => typeof d.advertisementDecode === 'function');
 
 const customDecoders = new Map(); // decoderName -> decoder
+const disabledBuiltins = new Set(); // built-in decoderNames switched off in the UI
+
+export function setDisabledBuiltins(names) {
+  disabledBuiltins.clear();
+  for (const n of names) disabledBuiltins.add(n);
+}
+
+export function isBuiltinEnabled(name) {
+  return !disabledBuiltins.has(name);
+}
 
 export function setCustomDecoders(list) {
   customDecoders.clear();
@@ -24,11 +34,13 @@ export function setCustomDecoders(list) {
 
 // Custom decoders override built-ins of the same decoderName (the rule the
 // Sensor Logger app uses), so they are matched first. `matchAll` decoders
-// (catch-alls like the theengs wrapper) go last, as a fallback.
+// (catch-alls like the theengs wrapper) go last, as a fallback. Disabled
+// built-ins are skipped; the toggles never affect custom decoders.
 export function activeDecoders() {
   const custom = [...customDecoders.values()];
   const shadowed = new Set(customDecoders.keys());
-  const all = custom.concat(builtinDecoders.filter((d) => !shadowed.has(d.decoderName)));
+  const builtins = builtinDecoders.filter((d) => !shadowed.has(d.decoderName) && !disabledBuiltins.has(d.decoderName));
+  const all = custom.concat(builtins);
   return all.filter((d) => !d.matchAll).concat(all.filter((d) => d.matchAll));
 }
 

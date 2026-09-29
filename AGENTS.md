@@ -95,7 +95,9 @@ built-in of the same `decoderName`. Verify shim changes against the decoders'
 own fixtures: each `node_modules/sensor-ble/devices/*.js` exports a `tests`
 array of given/expected pairs. Local extensions to the sensor-ble contract:
 `matchAll: true` matches every advertisement and such decoders are tried
-**last** (`activeDecoders`); `advertisementDecode` gets a third `meta` arg
+**last** (`activeDecoders`); built-ins unchecked in the UI are skipped
+(`setDisabledBuiltins`, persisted by `sensorble-custom.js` under
+`sensorble-disabled-builtins`; custom decoders are never affected); `advertisementDecode` gets a third `meta` arg
 `{ name, id }`.
 
 **Theengs-as-sensor-ble decoder.** `sensor-ble-decoders/theengs.js` is

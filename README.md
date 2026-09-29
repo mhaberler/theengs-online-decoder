@@ -188,6 +188,10 @@ Matching follows the library's own rule — local name, then manufacturer ID,
 then service UUID — so a decoder matches here exactly as it does under
 sensor-ble's Node harness.
 
+Each built-in has a checkbox in the Decoders panel: uncheck it to skip that
+decoder from the next advert on (e.g. to test a custom or the Theengs decoder
+alone). The choice is remembered, like installed decoders.
+
 ### Custom decoders
 
 Decoders can be installed at runtime from a URL, the same way Sensor Logger
