@@ -209,7 +209,9 @@ tab in the mobile app):
   (Browse works offline). The example catalog
   <https://mhaberler.github.io/sensor-ble-decoder-catalog/> is preset. A
   catalog page's **Add to Sensor-BLE** button or QR code opens the web app with
-  `?catalog=<url>`, which asks to add it.
+  `?catalog=<url>`, which asks to add it. The mobile app handles the deep link
+  `sensorble://catalog?url=<url-encoded catalog URL>` the same way (a catalog
+  page's QR code uses it when the template's `qrTarget` is `"deeplink"`).
 - **Install from URL** — the raw URL of a self-contained ES module exporting a
   `decoder` object (see the
   [sensor-ble API](https://github.com/tszheichoi/sensor-ble#sensor-ble-api)),

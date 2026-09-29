@@ -1,5 +1,6 @@
 'use strict';
 
+import { App } from '@capacitor/app';
 import { BleClient } from '@capacitor-community/bluetooth-le';
 import * as bleConn from './ble-conn.js';
 import { preferencesStorage } from './storage.js';
@@ -20,7 +21,7 @@ await initExprs();
 const panel = (name) => document.querySelector(`[data-panel="${name}"]`);
 initSerialSensorble(panel('serial-sensorble'), { conn: bleConn, readyMessage: 'Tap Start scan.' });
 initSerialJsonata(panel('serial-jsonata'), { conn: bleConn, readyMessage: 'Tap Start scan.' });
-initDecodersTab(panel('decoders'));
+const decodersTab = initDecodersTab(panel('decoders'));
 
 const tabBtns = document.querySelectorAll('.tab-btn');
 for (const btn of tabBtns) {
@@ -31,6 +32,29 @@ for (const btn of tabBtns) {
     }
   });
 }
+
+// Deep link sensorble://catalog?url=<catalog URL> (a catalog page's QR code
+// with qrTarget "deeplink"): like the web app's ?catalog= — confirm, add the
+// catalog, show the Decoders tab. Arrives via getLaunchUrl() on a cold start
+// and appUrlOpen while running; a repeat of the same URL is ignored, since
+// some platforms report a cold-start URL through both.
+let lastDeepLink = '';
+function handleDeepLink(link) {
+  if (!link || link === lastDeepLink) return;
+  lastDeepLink = link;
+  let u;
+  try { u = new URL(link); } catch { return; }
+  const target = u.host || u.pathname.replace(/^\/+/, ''); // sensorble://catalog or sensorble:catalog
+  if (u.protocol !== 'sensorble:' || target !== 'catalog') return;
+  const catalogUrl = u.searchParams.get('url');
+  if (!catalogUrl) return;
+  document.querySelector('.tab-btn[data-tab="decoders"]')?.click();
+  if (confirm(`Add this decoder catalog?\n\n${catalogUrl}\n\nOnly add catalogs you trust — their decoders run in the app.`)) {
+    decodersTab.addCatalog(catalogUrl);
+  }
+}
+App.addListener('appUrlOpen', ({ url }) => handleDeepLink(url));
+App.getLaunchUrl().then((r) => handleDeepLink(r?.url)).catch(() => {});
 
 const locBtn = document.querySelector('#sbl-location');
 bleConn.setLocationOffHandler(() => { locBtn.hidden = false; });

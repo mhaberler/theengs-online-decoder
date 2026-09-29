@@ -106,7 +106,11 @@ against `seenSignals()` from sensorble-decode, index resolution, sha256) live
 in [web/catalog-util.js](web/catalog-util.js). The catalog format and a
 forkable publisher are in the separate template repo
 `mhaberler/sensor-ble-decoder-catalog`. The web app handles `?catalog=<url>`
-(confirm, then add). Verify shim changes against the decoders'
+(confirm, then add); the mobile app handles the deep link
+`sensorble://catalog?url=<encoded url>` identically (`handleDeepLink` in
+[app/main.js](app/main.js), via `@capacitor/app` `getLaunchUrl`/`appUrlOpen`;
+scheme registered in `Info.plist` `CFBundleURLTypes` and an Android
+`intent-filter`). Verify shim changes against the decoders'
 own fixtures: each `node_modules/sensor-ble/devices/*.js` exports a `tests`
 array of given/expected pairs. Local extensions to the sensor-ble contract:
 `matchAll: true` matches every advertisement and such decoders are tried
