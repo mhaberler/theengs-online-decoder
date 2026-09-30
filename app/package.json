@@ -20,15 +20,15 @@
     "open-android": "bunx cap open android"
   },
   "dependencies": {
-    "@capacitor-community/bluetooth-le": "^8.2.0",
-    "@capacitor/android": "^8.3.4",
-    "@capacitor/app": "^8.1.0",
-    "@capacitor/core": "^8.3.4",
-    "@capacitor/ios": "^8.3.4",
-    "@capacitor/preferences": "^8.0.0"
+    "@capacitor-community/bluetooth-le": "^8.3.0",
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/ios": "^8.5.2",
+    "@capacitor/preferences": "^8.0.1"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.3.4",
+    "@capacitor/cli": "^8.5.2",
     "vite": "^8.3.1"
   }
 }
