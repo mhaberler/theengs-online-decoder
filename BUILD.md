@@ -10,6 +10,7 @@ No fastlane, no certificate repository: iOS uses Xcode's automatic
 plain Gradle with an upload keystore.
 
 - [Overview](#overview)
+- [Do I need a Mac?](#do-i-need-a-mac)
 - [Identifiers used by this app](#identifiers-used-by-this-app)
 - [Local development builds](#local-development-builds)
 - [One-time setup: Apple / iOS](#one-time-setup-apple--ios)
@@ -49,6 +50,42 @@ plain Gradle with an upload keystore.
 
 App tags use the `app-v` prefix so they don't collide with the web/library
 release tags (`v*`), which deploy GitHub Pages.
+
+## Do I need a Mac?
+
+**Not for signed release builds.** All iOS signing happens on GitHub's
+**macOS runner** (`macos-15`, which has Xcode installed); you never need a Mac
+or Xcode yourself to set up, build, sign or ship. The Apple side is done in a
+browser, and the secrets can be set from any machine.
+
+| Step | Where it happens | Mac needed? |
+|---|---|---|
+| Register the App ID (bundle ID) | developer.apple.com (browser) | no |
+| Create the App Store Connect app record | appstoreconnect.apple.com (browser) | no |
+| Create the **Admin** API key, download the `.p8` | App Store Connect (browser) | no |
+| Create the Android upload keystore | `keytool` from any JDK (Windows, Linux, macOS) | no |
+| Put the secrets into the repo | `scripts/sync-app-secrets.sh` (bash + `gh`) or GitHub's web UI — see [without the script](#without-the-script-browser-only) | no |
+| Archive, sign (cloud-managed certificate), upload to TestFlight | GitHub `macos-15` runner | no — GitHub's Mac |
+| Build and sign the Android APK/AAB | GitHub `ubuntu-24.04` runner | no |
+| Install on an iPhone | TestFlight app | no |
+| Install on an Android phone | Play testing, or sideload the APK | no |
+
+What **does** need a Mac with Xcode:
+
+- **Local iOS development**: `bun run run-ios` / `cap run ios`, live reload,
+  and debugging on an iPhone connected by cable (Safari Web Inspector for the
+  WebView). Android development needs only the Android SDK, on any OS.
+- **Creating the iOS project from scratch** (`bunx cap add ios`) and bigger
+  native changes (new capabilities, Xcode project settings) are easiest in
+  Xcode. This repository already contains `app/ios`, and small edits —
+  `DEVELOPMENT_TEAM` in `project.pbxproj`, keys in `Info.plist` — are plain
+  text and can be made anywhere.
+- Plugin updates normally don't: CI runs `cap sync ios` itself, and iOS uses
+  Swift Package Manager, which Xcode on the runner resolves.
+
+So a Windows or Linux machine with a browser is enough to take this app from a
+code change to TestFlight: edit, push, tag (`bun run release:app`), then
+install from TestFlight.
 
 ## Identifiers used by this app
 
@@ -286,6 +323,24 @@ them with `gh secret set` — values are piped, never printed.
 `.env` is read literally (no shell expansion), so passwords may contain `$`
 or spaces; one pair of surrounding quotes is stripped. Values in the env file
 win over variables already exported in your shell.
+
+### Without the script (browser only)
+
+No bash or `gh` at hand (e.g. on Windows)? Set the same seven secrets in the
+GitHub web UI: repository → **Settings → Secrets and variables → Actions →
+New repository secret**, one per row of the table above. The two file secrets
+must be **base64 on a single line**:
+
+| OS | `.p8` key | keystore |
+|---|---|---|
+| macOS | `base64 -i AuthKey_XXXX.p8 \| pbcopy` | `base64 -i upload-key.keystore \| pbcopy` |
+| Linux | `base64 -w0 AuthKey_XXXX.p8` | `base64 -w0 upload-key.keystore` |
+| Windows (PowerShell) | `[Convert]::ToBase64String([IO.File]::ReadAllBytes("AuthKey_XXXX.p8")) \| Set-Clipboard` | same with `upload-key.keystore` |
+
+Paste the output as the secret value (`ASC_KEY_P8`, `ANDROID_KEYSTORE`); the
+other five are the plain values. Avoid `certutil -encode` on Windows — it adds
+header lines and line breaks. The workflow checks that `ASC_KEY_P8` decodes to
+a private key and fails early with a clear message if not.
 
 ## Building releases in CI
 
