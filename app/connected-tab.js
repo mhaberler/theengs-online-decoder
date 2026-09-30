@@ -4,7 +4,7 @@
 // decoder (by serviceUUID / name / manufacturer), Connect, and a live card per
 // connected device. Rendering is throttled; streams can be 100 Hz or more.
 
-import { streamingCandidates } from '../web/sensorble-decode.js';
+import { streamingCandidates, streamingDecoders } from '../web/sensorble-decode.js';
 import * as gatt from './gatt.js';
 
 const CANDIDATE_TTL_MS = 30_000;
@@ -81,7 +81,12 @@ export function initConnectedTab(root, conn) {
       for (const d of c.decoders) {
         const b = el('button', '', c.decoders.length > 1 ? `Connect (${d.decoderName})` : `Connect · ${d.decoderName}`);
         b.disabled = busy;
-        b.addEventListener('click', () => gatt.connect(c.id, c.name, d));
+        // Resolve by name at click time: a decoder installed or overridden
+        // since the device's last advert must win over the cached match.
+        b.addEventListener('click', () => {
+          const current = streamingDecoders().find((x) => x.decoderName === d.decoderName) ?? d;
+          gatt.connect(c.id, c.name, current);
+        });
         actions.appendChild(b);
       }
       row.appendChild(actions);
@@ -105,6 +110,12 @@ export function initConnectedTab(root, conn) {
       const age = s.updatedAt ? `${((Date.now() - s.updatedAt) / 1000).toFixed(1)} s ago` : 'no data yet';
       card.appendChild(el('div', 'decoder-meta', `${s.deviceId} · ${s.count} readings · last ${age}`));
       if (s.error) card.appendChild(el('div', 'decoder-error', s.error));
+      if (s.info) card.appendChild(el('div', 'decoder-meta', Object.entries(s.info).map(([k, v]) => `${k}: ${fmt(v)}`).join(' · ')));
+      // Diagnostics: notifications per characteristic (n, last size, decoded to nothing), writes.
+      const tail = (u) => String(u).slice(0, 8);
+      card.appendChild(el('div', 'decoder-meta con-diag',
+        s.diag.chars.map((c) => `${tail(c.characteristic)}: ${c.n} (${c.bytes} B, ${c.empty} empty)${c.last ? ' last ' + c.last : ''}`).join(' · ') +
+        ` · writes ${s.diag.writes}${s.diag.lastWrite ? ' last ' + s.diag.lastWrite : ''}` + (s.diag.writeError ? ` · write error: ${s.diag.writeError}` : '')));
       const keys = Object.keys(s.values);
       if (keys.length) {
         const table = el('table', 'con-values');

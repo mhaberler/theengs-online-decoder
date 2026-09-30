@@ -16,15 +16,36 @@ import { uuid128 } from './scan-entry.js';
 // bare ArrayBuffer.
 const toBuffer = (dv) => Buffer.from(new Uint8Array(dv.buffer, dv.byteOffset, dv.byteLength));
 
-// The bleApi object sensor-ble decoders receive in start()/stop().
-function bleApiFor(deviceId) {
+const hex = (bytes) => [...bytes].map((b) => b.toString(16).padStart(2, '0')).join(' ');
+
+// The bleApi object sensor-ble decoders receive in onConnect()/start()/stop().
+// Writes are counted on the session (diagnostics shown in the Connected tab).
+function bleApiFor(deviceId, s) {
   return {
     write: async (id, service, characteristic, data) => {
       const bytes = Uint8Array.from(data);
-      await BleClient.write(id ?? deviceId, uuid128(service), uuid128(characteristic), new DataView(bytes.buffer));
+      try {
+        await BleClient.write(id ?? deviceId, uuid128(service), uuid128(characteristic), new DataView(bytes.buffer));
+        if (s) { s.diag.writes++; s.diag.lastWrite = hex(bytes); }
+      } catch (e) {
+        if (s) s.diag.writeError = `${e?.message ?? e} (write ${hex(bytes)})`;
+        throw e;
+      }
     },
   };
 }
+
+// Reject if a decoder step doesn't finish (e.g. waits for a reply that never
+// comes), so the session shows an error instead of "starting" forever.
+function withTimeout(promise, ms, what) {
+  let t;
+  return Promise.race([
+    promise.finally(() => clearTimeout(t)),
+    new Promise((_, reject) => { t = setTimeout(() => reject(new Error(`${what}: no reply from the device within ${ms / 1000} s`)), ms); }),
+  ]);
+}
+
+const STEP_TIMEOUT_MS = 10_000;
 
 // sessions: deviceId -> { deviceId, name, decoder, state, values, updatedAt, error, count }
 const sessions = new Map();
@@ -45,10 +66,16 @@ export function sessionList() {
 
 export async function connect(deviceId, name, decoder) {
   if (sessions.has(deviceId)) return sessions.get(deviceId);
-  const s = { deviceId, name, decoder, state: 'connecting', values: {}, updatedAt: 0, error: null, count: 0 };
+  const s = {
+    deviceId, name, decoder, state: 'connecting', values: {}, updatedAt: 0, error: null, count: 0,
+    info: null,
+    // Per notify characteristic: notifications seen, last size, and how many
+    // decoded to nothing — tells which step stalls without a debugger.
+    diag: { writes: 0, lastWrite: '', writeError: null, chars: decoder.notify.map((n) => ({ characteristic: n.characteristic, n: 0, bytes: 0, empty: 0, last: '' })) },
+  };
   sessions.set(deviceId, s);
   changed();
-  const api = bleApiFor(deviceId);
+  const api = bleApiFor(deviceId, s);
   try {
     await ensureInitialized();
     await BleClient.connect(deviceId, () => {
@@ -59,14 +86,19 @@ export async function connect(deviceId, name, decoder) {
         changed();
       }
     });
-    for (const n of decoder.notify) {
+    for (const [i, n] of decoder.notify.entries()) {
+      const d = s.diag.chars[i];
       await BleClient.startNotifications(deviceId, uuid128(n.service), uuid128(n.characteristic), (dv) => {
+        d.n++;
+        d.bytes = dv.byteLength;
+        d.last = hex(new Uint8Array(dv.buffer, dv.byteOffset, dv.byteLength));
         let out = null;
         try {
           out = n.onNotification(deviceId, toBuffer(dv));
         } catch (e) {
           s.error = `decoder error: ${e.message}`;
         }
+        if (!out) d.empty++;
         if (out) {
           // Merge: devices may report different fields on different
           // characteristics (e.g. TESS pressure vs battery).
@@ -76,10 +108,22 @@ export async function connect(deviceId, name, decoder) {
         }
       });
     }
+    // Optional info exchange before start(), as sensor-ble's harness does
+    // (Muse: firmware, battery, sensors).
+    if (typeof decoder.onConnect === 'function') {
+      s.state = 'identifying';
+      changed();
+      // Informational only: a failure is shown but doesn't stop streaming.
+      try {
+        s.info = await withTimeout(decoder.onConnect(deviceId, api), STEP_TIMEOUT_MS, 'onConnect()');
+      } catch (e) {
+        s.error = e?.message ?? String(e);
+      }
+    }
     s.state = 'starting';
     changed();
     // isPreview = false: full rate (e.g. Muse at 100 Hz); the UI throttles.
-    await decoder.start(deviceId, false, api);
+    await withTimeout(decoder.start(deviceId, false, api), STEP_TIMEOUT_MS, 'start()');
     s.state = 'streaming';
   } catch (e) {
     s.state = 'failed';
